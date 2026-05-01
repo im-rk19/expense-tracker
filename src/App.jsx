@@ -4,9 +4,17 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURATION ---
 // User should replace these with their own Supabase credentials
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'; 
+const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co'; 
 const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let supabase = null;
+try {
+  if (SUPABASE_URL.startsWith('https://')) {
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch (e) {
+  console.error('Supabase initialization failed:', e);
+}
 
 const DEFAULT_CATEGORIES = [
   { id: 1, name: 'Food', emoji: '🍔', color: '#FF6B6B' },
@@ -32,6 +40,12 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
   const handleRaghuLogin = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (!supabase) {
+      setError('Supabase keys missing! Open src/App.jsx and paste your URL and Key.');
+      return;
+    }
+
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -207,6 +221,10 @@ const ExpenseTracker = () => {
   // Check initial auth state
   useEffect(() => {
     const checkAuth = async () => {
+      if (!supabase) {
+        setAuthStatus('login');
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUser(session.user);
@@ -311,7 +329,7 @@ const ExpenseTracker = () => {
       user_id: user?.id || null,
     };
 
-    if (storageMode === 'supabase') {
+    if (storageMode === 'supabase' && supabase) {
       const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
       if (!error && data) setExpenses([data[0], ...expenses]);
     } else {
@@ -326,7 +344,7 @@ const ExpenseTracker = () => {
   };
 
   const handleDeleteExpense = async (id) => {
-    if (storageMode === 'supabase') {
+    if (storageMode === 'supabase' && supabase) {
       await supabase.from('expenses').delete().eq('id', id);
     }
     setExpenses(expenses.filter(e => e.id !== id));
