@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, L
 import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURATION ---
-const SUPABASE_URL = 'https://ylvuvillspfkfillmmrqqz.supabase.co'; 
+const SUPABASE_URL = 'https://ylvuvillpfkfilmmrqqz.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsdnV2aWxscGZrZmlsbW1ycXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDkyNTksImV4cCI6MjA5MzIyNTI1OX0.42JPnnQlE0oh2X0WE3rK9TQ52qHDe63ocuoY48kSw0w';
 
 let supabase = null;
