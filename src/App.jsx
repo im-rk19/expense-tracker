@@ -61,23 +61,12 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
 
   const handleOthersLogin = (e) => {
     e.preventDefault();
-    const saved = localStorage.getItem('appPasscode');
-    if (!saved) {
-      if (passcode.length < 4) {
-        setError('Passcode must be at least 4 digits');
-        return;
-      }
-      localStorage.setItem('appPasscode', passcode);
+    if (passcode === 'niveditha') {
       setStorageMode('local');
       setAuthStatus('authenticated');
     } else {
-      if (passcode === saved) {
-        setStorageMode('local');
-        setAuthStatus('authenticated');
-      } else {
-        setError('Incorrect passcode');
-        setPasscode('');
-      }
+      setError('Incorrect password');
+      setPasscode('');
     }
   };
 
@@ -144,10 +133,22 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
 
         {view === 'others' && (
           <form onSubmit={handleOthersLogin} className="space-y-4">
-            <input type="password" pattern="[0-9]*" inputMode="numeric" placeholder="****" value={passcode} onChange={e => setPasscode(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white" required autoFocus />
+            <p className="text-slate-400 text-xs px-2 mb-2 text-center">
+              Enter the master device password
+            </p>
+            <input 
+              type="password" 
+              placeholder="••••••••"
+              value={passcode}
+              onChange={e => setPasscode(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-xl text-white focus:border-emerald-500 outline-none"
+              required
+              autoFocus
+            />
             {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
-            <button type="submit" className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl">Unlock</button>
+            <button type="submit" className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl">
+              Unlock
+            </button>
             <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto">Back</button>
           </form>
         )}
