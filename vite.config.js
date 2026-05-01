@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Expense Tracker',
         short_name: 'Expenses',
         description: 'Track your expenses locally',
-        theme_color: '#0f172a',
-        background_color: '#030712',
+        theme_color: '#FFF4BD',
+        background_color: '#FFF4BD',
         display: 'standalone',
         icons: [
           {
