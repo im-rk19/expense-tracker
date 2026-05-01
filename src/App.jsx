@@ -1,6 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock } from 'lucide-react';
 
+// Passcode Component extracted to prevent focus loss and hook issues
+const PasscodeView = ({ isSetup, setAuthStatus }) => {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isSetup) {
+      if (input.length < 4) {
+        setError('Passcode must be at least 4 characters');
+        return;
+      }
+      localStorage.setItem('appPasscode', input);
+      setAuthStatus('authenticated');
+    } else {
+      if (input === localStorage.getItem('appPasscode')) {
+        setAuthStatus('authenticated');
+      } else {
+        setError('Incorrect passcode');
+        setInput('');
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 text-center animate-in fade-in duration-300">
+      <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 w-full max-w-sm shadow-2xl">
+        <div className="mb-6 bg-slate-950/50 p-4 rounded-xl border border-yellow-900/30 text-left">
+          <div className="flex items-center gap-2 mb-2 text-yellow-500">
+            <Lock size={16} />
+            <h2 className="text-sm font-bold">Privacy Notice</h2>
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Data is stored entirely on localstorage. There is no utilisation of private user data stored anywhere. 
+            Clearing your browser data will permanently delete your expenses. Your passcode is also stored locally.
+          </p>
+        </div>
+        
+        <h2 className="text-2xl font-bold mb-6 text-white">{isSetup ? 'Create Passcode' : 'Enter Passcode'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="password"
+            pattern="[0-9]*"
+            inputMode="numeric"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="****"
+            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500 transition-all"
+            autoFocus
+          />
+          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+          <button type="submit" className="w-full bg-white text-slate-900 font-bold py-4 rounded-xl hover:bg-slate-200 active:scale-[0.98] transition-all">
+            {isSetup ? 'Save Passcode' : 'Unlock App'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const ExpenseTracker = () => {
   const DEFAULT_CATEGORIES = [
     { id: 1, name: 'Food', emoji: '🍔', color: '#FF6B6B' },
@@ -148,67 +208,7 @@ const ExpenseTracker = () => {
     calendarDays.push(i);
   }
 
-  // Passcode Component
-  const PasscodeView = ({ isSetup }) => {
-    const [input, setInput] = useState('');
-    const [error, setError] = useState('');
-
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      if (isSetup) {
-        if (input.length < 4) {
-          setError('Passcode must be at least 4 characters');
-          return;
-        }
-        localStorage.setItem('appPasscode', input);
-        setAuthStatus('authenticated');
-      } else {
-        if (input === localStorage.getItem('appPasscode')) {
-          setAuthStatus('authenticated');
-        } else {
-          setError('Incorrect passcode');
-          setInput('');
-        }
-      }
-    };
-
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 text-center animate-in fade-in duration-300">
-        <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 w-full max-w-sm shadow-2xl">
-          <div className="mb-6 bg-slate-950/50 p-4 rounded-xl border border-yellow-900/30 text-left">
-            <div className="flex items-center gap-2 mb-2 text-yellow-500">
-              <Lock size={16} />
-              <h2 className="text-sm font-bold">Privacy Notice</h2>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Data is stored entirely on localstorage. There is no utilisation of private user data stored anywhere. 
-              Clearing your browser data will permanently delete your expenses. Your passcode is also stored locally.
-            </p>
-          </div>
-          
-          <h2 className="text-2xl font-bold mb-6 text-white">{isSetup ? 'Create Passcode' : 'Enter Passcode'}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="password"
-              pattern="[0-9]*"
-              inputMode="numeric"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="****"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white focus:outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500 transition-all"
-              autoFocus
-            />
-            {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
-            <button type="submit" className="w-full bg-white text-slate-900 font-bold py-4 rounded-xl hover:bg-slate-200 active:scale-[0.98] transition-all">
-              {isSetup ? 'Save Passcode' : 'Unlock App'}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  // Standard Views
+  // Standard Views called as functions to prevent re-mounting input fields
   const OverviewView = () => (
     <div className="space-y-4">
       {/* Total Summary */}
@@ -505,14 +505,14 @@ const ExpenseTracker = () => {
         </div>
 
         {/* Views */}
-        {authStatus === 'setup' && <PasscodeView isSetup={true} />}
-        {authStatus === 'authenticating' && <PasscodeView isSetup={false} />}
+        {authStatus === 'setup' && <PasscodeView isSetup={true} setAuthStatus={setAuthStatus} />}
+        {authStatus === 'authenticating' && <PasscodeView isSetup={false} setAuthStatus={setAuthStatus} />}
         
         {authStatus === 'authenticated' && (
           <>
-            {view === 'overview' && <OverviewView />}
-            {view === 'add' && <AddExpenseView />}
-            {view === 'calendar' && <CalendarView />}
+            {view === 'overview' && OverviewView()}
+            {view === 'add' && AddExpenseView()}
+            {view === 'calendar' && CalendarView()}
           </>
         )}
 
