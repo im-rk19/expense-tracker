@@ -99,10 +99,16 @@ const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handl
       <h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter">
         <TrendingUp className="text-blue-500" /> {storageMode === 'cloud' ? 'Cloud Ledger' : 'Local Ledger'}
       </h1>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-        {storageMode === 'cloud' ? 'Syncing to Sheets' : 'Offline Mode'}
-        {storageMode === 'cloud' && <RefreshCw size={10} className={isSyncing ? 'animate-spin' : ''} onClick={handleSync} />}
-      </p>
+      <div className="flex items-center gap-2 mt-1">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          {storageMode === 'cloud' ? 'Sync Active' : 'Offline Mode'}
+        </p>
+        {storageMode === 'cloud' && (
+          <button onClick={handleSync} className="text-slate-600 hover:text-blue-400 transition-colors">
+            <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+          </button>
+        )}
+      </div>
     </div>
     <div className="flex items-center gap-3">
        <button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border transition-all ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>
@@ -229,76 +235,77 @@ const ExpenseTracker = () => {
 
   // --- LOGIC ---
 
-  const loadData = useCallback(async (mode) => {
-    if (mode === 'local') {
-      const saved = localStorage.getItem('expenses');
-      setExpenses(saved ? JSON.parse(saved) : []);
-    } else {
-      setIsSyncing(true);
-      try {
-        const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
-        const data = await response.json();
-        const formatted = data.map(item => ({
-          ...item,
-          id: item.id || Math.random().toString(36).substr(2, 9),
-          categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
-        }));
-        setExpenses(formatted);
-        localStorage.setItem('expenses', JSON.stringify(formatted)); // Cache cloud data locally
-      } catch (err) {
-        console.error("Cloud fetch failed:", err);
-        const saved = localStorage.getItem('expenses');
-        if (saved) setExpenses(JSON.parse(saved));
-      } finally {
-        setIsSyncing(false);
-      }
+  const loadDataFromCloud = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
+      const data = await response.json();
+      const formatted = data.map(item => ({
+        ...item,
+        id: item.id || Math.random().toString(36).substr(2, 9),
+        categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
+      }));
+      setExpenses(formatted);
+      localStorage.setItem('expenses', JSON.stringify(formatted)); // Always keep local cache updated
+    } catch (err) {
+      console.error("Cloud fetch failed:", err);
+    } finally {
+      setIsSyncing(false);
     }
   }, []);
 
   useEffect(() => {
     const mode = localStorage.getItem('appMode');
+    const savedExpenses = localStorage.getItem('expenses');
+    
+    // INSTANT LOAD from local cache
+    if (savedExpenses) {
+      setExpenses(JSON.parse(savedExpenses));
+    }
+
     if (mode) {
       setStorageMode(mode);
       setAuthStatus('authenticated');
-      loadData(mode);
+      if (mode === 'cloud') loadDataFromCloud();
     } else {
       setAuthStatus('login');
     }
 
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
-  }, [loadData]);
+  }, [loadDataFromCloud]);
 
   const handleAddExpense = async () => {
     if (!selectedCategory || !amount) return;
     const cat = DEFAULT_CATEGORIES.find(c => c.id === selectedCategory);
     const newExpense = { 
-      id: Date.now().toString(),
+      id: "local_" + Date.now().toString(),
       categoryId: selectedCategory, 
       amount: parseFloat(amount), 
       description: description || 'No description', 
       date: selectedDate 
     };
 
+    // OPTIMISTIC UPDATE (Instant UI change)
     const updatedExpenses = [newExpense, ...expenses];
     setExpenses(updatedExpenses);
     localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
 
     if (storageMode === 'cloud') {
       setIsSyncing(true);
-      try {
-        await fetch(GOOGLE_SHEET_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify({
-            date: selectedDate,
-            amount: parseFloat(amount),
-            description: description || 'No description',
-            categoryName: cat?.name || 'Miscellaneous'
-          })
-        });
-      } catch (err) { console.error("Sync error:", err); }
-      finally { setIsSyncing(false); }
+      fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+          date: selectedDate,
+          amount: parseFloat(amount),
+          description: description || 'No description',
+          categoryName: cat?.name || 'Miscellaneous'
+        })
+      }).finally(() => {
+         setIsSyncing(false);
+         loadDataFromCloud(); // Background refresh to get clean cloud data
+      });
     }
 
     setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
@@ -306,24 +313,26 @@ const ExpenseTracker = () => {
 
   const handleDeleteExpense = async (id) => {
     const expenseToDelete = expenses.find(e => e.id === id);
+    
+    // OPTIMISTIC UPDATE (Instant UI change)
     const updated = expenses.filter(e => e.id !== id);
     setExpenses(updated);
     localStorage.setItem('expenses', JSON.stringify(updated));
 
     if (storageMode === 'cloud' && expenseToDelete) {
       setIsSyncing(true);
-      try {
-        await fetch(GOOGLE_SHEET_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify({
-            action: 'delete',
-            description: expenseToDelete.description,
-            amount: expenseToDelete.amount
-          })
-        });
-      } catch (err) { console.error("Delete sync error:", err); }
-      finally { setIsSyncing(false); }
+      fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+          action: 'delete',
+          description: expenseToDelete.description,
+          amount: expenseToDelete.amount
+        })
+      }).finally(() => {
+        setIsSyncing(false);
+        loadDataFromCloud(); // Background refresh
+      });
     }
   };
 
@@ -333,7 +342,7 @@ const ExpenseTracker = () => {
     window.location.reload();
   };
 
-  const total = expenses.reduce((s, e) => s + e.amount, 0).toFixed(2);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0).toFixed(2);
 
   const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
@@ -349,9 +358,9 @@ const ExpenseTracker = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
-        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={() => loadData(storageMode)} />
+        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={loadDataFromCloud} />
 
-        {view === 'overview' && <OverviewView total={total} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
+        {view === 'overview' && <OverviewView total={totalSpent} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
         {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
         {view === 'calendar' && <CalendarView currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} calendarDays={calendarDays} selectedDate={selectedDate} setSelectedDate={setSelectedDate} expenses={expenses} categories={DEFAULT_CATEGORIES} handleDeleteExpense={handleDeleteExpense} setView={setView} />}
 
