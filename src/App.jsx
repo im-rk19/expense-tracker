@@ -31,7 +31,6 @@ const DEFAULT_CATEGORIES = [
 const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
   const [view, setView] = useState('choice'); // 'choice', 'raghu', 'others'
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [showInfo, setShowInfo] = useState(false);
@@ -41,13 +40,14 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
     setError('');
     
     if (!supabase) {
-      setError('Supabase keys missing! Open src/App.jsx and paste your URL and Key.');
+      setError('Supabase configuration error.');
       return;
     }
 
+    // Hardcoded password for Raghu as requested
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: 'niveditha',
     });
 
     if (authError) {
@@ -61,12 +61,23 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
 
   const handleOthersLogin = (e) => {
     e.preventDefault();
-    if (passcode === 'niveditha') {
+    const saved = localStorage.getItem('appPasscode');
+    if (!saved) {
+      if (passcode.length < 4) {
+        setError('Passcode must be at least 4 digits');
+        return;
+      }
+      localStorage.setItem('appPasscode', passcode);
       setStorageMode('local');
       setAuthStatus('authenticated');
     } else {
-      setError('Incorrect password');
-      setPasscode('');
+      if (passcode === saved) {
+        setStorageMode('local');
+        setAuthStatus('authenticated');
+      } else {
+        setError('Incorrect passcode');
+        setPasscode('');
+      }
     }
   };
 
@@ -83,11 +94,11 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
         {showInfo && (
           <div className="absolute inset-0 bg-slate-950/95 rounded-3xl p-6 z-10 flex flex-col items-center justify-center text-left">
             <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2 w-full">
-               <Info size={18} /> Storage Comparison
+               <Info size={18} /> Storage Info
             </h3>
             <div className="space-y-4 text-xs text-slate-400">
-              <p><strong className="text-blue-400">Login as Raghu:</strong> Syncs to Supabase Cloud. Access from any device.</p>
-              <p><strong className="text-emerald-400">Login as Others:</strong> Stored 100% on this phone's memory. Private & offline.</p>
+              <p><strong className="text-blue-400">Login as Raghu:</strong> Syncs to Supabase Cloud using master password.</p>
+              <p><strong className="text-emerald-400">Login as Others:</strong> Stored 100% locally. You set your own passcode.</p>
             </div>
             <button onClick={() => setShowInfo(false)} className="mt-6 bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold">Close</button>
           </div>
@@ -106,7 +117,7 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
               <div className="bg-blue-500/20 p-2 rounded-xl"><User className="text-blue-400" /></div>
               <div className="text-left">
                 <p className="text-white font-bold">Login as Raghu</p>
-                <p className="text-slate-500 text-[10px]">Cloud Sync</p>
+                <p className="text-slate-500 text-[10px]">Cloud Sync (Master PW)</p>
               </div>
             </button>
             <button onClick={() => setView('others')} className="w-full flex items-center gap-4 bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl transition border border-slate-700/50 group">
@@ -121,9 +132,8 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
 
         {view === 'raghu' && (
           <form onSubmit={handleRaghuLogin} className="space-y-4">
+            <p className="text-slate-400 text-xs px-2 mb-2 text-center">Enter your email address</p>
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
             {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
             <button type="submit" className="w-full bg-blue-600 text-white font-black py-3 rounded-xl">Sign In</button>
@@ -134,22 +144,13 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
         {view === 'others' && (
           <form onSubmit={handleOthersLogin} className="space-y-4">
             <p className="text-slate-400 text-xs px-2 mb-2 text-center">
-              Enter the master device password
+              {localStorage.getItem('appPasscode') ? 'Enter your device passcode' : 'Set a new passcode for this device'}
             </p>
-            <input 
-              type="password" 
-              placeholder="••••••••"
-              value={passcode}
-              onChange={e => setPasscode(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-xl text-white focus:border-emerald-500 outline-none"
-              required
-              autoFocus
-            />
+            <input type="password" pattern="[0-9]*" inputMode="numeric" placeholder="****" value={passcode} onChange={e => setPasscode(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white" required autoFocus />
             {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
-            <button type="submit" className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl">
-              Unlock
-            </button>
-            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto">Back</button>
+            <button type="submit" className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl">Unlock</button>
+            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold">Back</button>
           </form>
         )}
       </div>
@@ -267,7 +268,6 @@ const ExpenseTracker = () => {
 
   const getExpensesByDate = (date) => expenses.filter(e => e.date === date);
 
-  // Calendar Logic Restored
   const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   const daysInMonth = getDaysInMonth(currentMonth);
@@ -398,7 +398,7 @@ const ExpenseTracker = () => {
            </div>
            <div className="flex items-center gap-3">
               <button onClick={handleInstallClick} 
-                className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border transition-all ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-800' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>
+                className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border transition-all ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>
                 {isInstalled ? 'INSTALLED' : 'INSTALL'}
               </button>
               <button onClick={() => { supabase?.auth.signOut(); window.location.reload(); }} className="bg-slate-900 p-2 rounded-full border border-slate-800 text-slate-500 hover:text-white transition-colors"><LogOut size={18}/></button>
