@@ -143,7 +143,7 @@ export default function App() {
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="bg-red-600/10 p-2 rounded-xl border border-red-600/20"><IndianRupee className="text-red-500" size={20} /></div>
-            <h1 className="text-lg font-black uppercase tracking-tighter">Tracker <span className="text-[8px] bg-red-600 px-1 rounded ml-1">V2</span></h1>
+            <h1 className="text-lg font-black uppercase tracking-tighter">Tracker <span className="text-[8px] bg-red-600 px-1 rounded ml-1 tracking-normal">V2</span></h1>
           </div>
           <div className="flex gap-2">
             <button onClick={importCSV} className="p-2 text-slate-500"><Upload size={16}/></button>
@@ -155,11 +155,12 @@ export default function App() {
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
           {["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"].map((m, i) => (
             <button key={m} onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), i, 1))}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all border flex-shrink-0 ${currentMonth.getMonth() === i ? 'bg-red-600 border-red-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{m}</button>
+              className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all border flex-shrink-0 ${currentMonth.getMonth() === i ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/20' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{m}</button>
           ))}
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-6 shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-6 shadow-xl relative overflow-hidden group transition-all hover:border-red-600/50">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl -mr-16 -mt-16 group-hover:bg-red-600/20 transition-all"></div>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Spent this month</p>
           <p className="text-4xl font-black tracking-tighter">₹{total}</p>
         </div>
@@ -167,12 +168,12 @@ export default function App() {
         {view === 'overview' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3">
-              {DEFAULT_CATEGORIES.slice(0, 4).map(cat => {
+              {DEFAULT_CATEGORIES.map(cat => {
                 const catTotal = filtered.filter(e => e.categoryId === cat.id).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0).toFixed(0);
                 return (
                   <div key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
-                    className={`rounded-2xl p-4 border transition-all ${categoryFilter === cat.id ? 'bg-red-600 border-red-400' : 'bg-slate-900 border-slate-800'}`}>
-                    <div className="flex items-center gap-2 mb-1"><span className="text-xl">{cat.emoji}</span><span className="text-[9px] font-black text-slate-500 uppercase">{cat.name}</span></div>
+                    className={`rounded-2xl p-4 border transition-all ${categoryFilter === cat.id ? 'bg-red-600 border-red-400 shadow-md' : 'bg-slate-900 border-slate-800'}`}>
+                    <div className="flex items-center gap-2 mb-1"><span className="text-xl">{cat.emoji}</span><span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{cat.name}</span></div>
                     <p className="text-xl font-black">₹{catTotal}</p>
                   </div>
                 );
@@ -181,12 +182,12 @@ export default function App() {
             <div className="space-y-2">
               <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-2">Transactions</p>
               {filtered.map(e => (
-                <div key={e.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl flex justify-between items-center">
+                <div key={e.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-all">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{DEFAULT_CATEGORIES.find(c => c.id === e.categoryId)?.emoji}</span>
-                    <div><p className="text-sm font-bold">{e.description}</p><p className="text-[9px] text-slate-500 uppercase">{e.date}</p></div>
+                    <div><p className="text-sm font-bold leading-none mb-1">{e.description}</p><p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{e.date}</p></div>
                   </div>
-                  <div className="flex items-center gap-4"><p className="text-lg font-black">₹{e.amount.toFixed(0)}</p><button onClick={() => del(e.id)} className="text-slate-700 hover:text-red-500"><X size={16}/></button></div>
+                  <div className="flex items-center gap-4"><p className="text-lg font-black">₹{e.amount.toFixed(0)}</p><button onClick={() => del(e.id)} className="text-slate-700 hover:text-red-500 p-1"><X size={16}/></button></div>
                 </div>
               ))}
               {filtered.length === 0 && <div className="py-20 text-center opacity-20"><PieChart size={40} className="mx-auto mb-2" /><p className="text-[10px] font-black uppercase">No records</p></div>}
@@ -196,14 +197,14 @@ export default function App() {
 
         {view === 'calendar' && (
           <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
                <div className="grid grid-cols-7 gap-1">
                   {['S','M','T','W','T','F','S'].map(d => <div key={d} className="text-center text-[10px] text-slate-600 font-bold mb-3">{d}</div>)}
                   {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }, (_, i) => i + 1).map(day => {
                     const dStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const has = expenses.some(e => e.date === dStr);
                     return (
-                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
+                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
                     );
                   })}
                </div>
@@ -222,22 +223,31 @@ export default function App() {
 
         {view === 'add' && (
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
-            <h2 className="text-red-500 font-black mb-6 uppercase text-[10px] text-center">Add Expense</h2>
+            <h2 className="text-red-500 font-black mb-6 uppercase text-[10px] text-center tracking-[0.2em]">Record Spend</h2>
             <div className="space-y-6">
-              <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
+              <div className="space-y-1">
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Date</p>
+                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
+              </div>
               <div className="grid grid-cols-5 gap-2">{DEFAULT_CATEGORIES.map(c => <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`p-4 rounded-2xl transition-all ${selectedCategory === c.id ? 'bg-red-600 scale-110 shadow-lg' : 'bg-black border border-slate-800'}`}><div className="text-2xl">{c.emoji}</div></button>)}</div>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="₹ Amount" className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-5 text-white text-3xl font-black outline-none focus:border-red-600" />
-              <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Spent on..." className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
-              <div className="flex gap-3"><button onClick={add} disabled={!amount || !selectedCategory} className="flex-[2] bg-red-600 py-5 rounded-2xl font-black uppercase disabled:opacity-30">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 py-5 rounded-2xl font-black uppercase text-[10px]">Cancel</button></div>
+              <div className="space-y-1">
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Amount</p>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="₹ 0.00" className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-5 text-white text-3xl font-black outline-none focus:border-red-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Remark</p>
+                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Spent on..." className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
+              </div>
+              <div className="flex gap-3"><button onClick={add} disabled={!amount || !selectedCategory} className="flex-[2] bg-red-600 py-5 rounded-2xl font-black uppercase disabled:opacity-30 tracking-widest shadow-xl shadow-red-600/20">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 py-5 rounded-2xl font-black uppercase text-[10px]">Cancel</button></div>
             </div>
           </div>
         )}
 
         <div className="fixed bottom-8 left-0 right-0 px-8 z-50">
           <div className="max-w-md mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800/50 p-2 rounded-[2rem] shadow-2xl flex gap-2">
-            <button onClick={() => setView('overview')} className={`flex-1 py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all ${view === 'overview' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500'}`}><TrendingUp size={20} /></button>
-            <button onClick={() => setView('add')} className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-xl -mt-8 border-4 border-black"><Plus size={32} strokeWidth={4} /></button>
-            <button onClick={() => setView('calendar')} className={`flex-1 py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all ${view === 'calendar' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500'}`}><CalendarIcon size={20} /></button>
+            <button onClick={() => setView('overview')} className={`flex-1 py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all ${view === 'overview' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-slate-500'}`}><TrendingUp size={20} /></button>
+            <button onClick={() => setView('add')} className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-red-600/40 -mt-8 border-4 border-black active:scale-90 transition-all"><Plus size={32} strokeWidth={4} /></button>
+            <button onClick={() => setView('calendar')} className={`flex-1 py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all ${view === 'calendar' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-slate-500'}`}><CalendarIcon size={20} /></button>
           </div>
         </div>
       </div>
