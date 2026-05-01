@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert } from 'lucide-react';
 
 // --- CONFIGURATION ---
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxFvRubylLLG_Fu-pJl961TmMFQ2j_8zuEd2-Yqw4hst0WCxhiqU0VJc6SunoMIS8LFvw/exec';
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyLqAWPxVEA5Gbd62lD4OrCmWc3HnPrhkoW_pCmCajKyCX6NzODAQPjaLWw7SjpKwcPBA/exec';
 
 const DEFAULT_CATEGORIES = [
   { id: 1, name: 'Food', emoji: '🍔', color: '#FF6B6B' },
