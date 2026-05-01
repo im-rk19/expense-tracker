@@ -26,7 +26,7 @@ const DEFAULT_CATEGORIES = [
   { id: 8, name: 'Miscellaneous', emoji: '📌', color: '#C7CEEA' },
 ];
 
-// --- COMPONENTS ---
+// --- VIEW COMPONENTS (Moved outside to fix keyboard focus bug) ---
 
 const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
   const [view, setView] = useState('choice'); 
@@ -39,45 +39,22 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
   const handleRaghuLogin = async (e) => {
     e.preventDefault();
     setError('');
-    
-    if (!supabase) {
-      setError('Configuration error.');
-      return;
-    }
-
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError) {
-      setError(authError.message);
-    } else {
-      setStorageMode('supabase');
-      setUser(data.user);
-      setAuthStatus('authenticated');
-    }
+    if (!supabase) { setError('Configuration error.'); return; }
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) { setError(authError.message); } 
+    else { setStorageMode('supabase'); setUser(data.user); setAuthStatus('authenticated'); }
   };
 
   const handleOthersLogin = (e) => {
     e.preventDefault();
     const saved = localStorage.getItem('appPasscode');
     if (!saved) {
-      if (passcode.length < 4) {
-        setError('Passcode must be at least 4 digits');
-        return;
-      }
+      if (passcode.length < 4) { setError('Passcode must be at least 4 digits'); return; }
       localStorage.setItem('appPasscode', passcode);
-      setStorageMode('local');
-      setAuthStatus('authenticated');
+      setStorageMode('local'); setAuthStatus('authenticated');
     } else {
-      if (passcode === saved) {
-        setStorageMode('local');
-        setAuthStatus('authenticated');
-      } else {
-        setError('Incorrect passcode');
-        setPasscode('');
-      }
+      if (passcode === saved) { setStorageMode('local'); setAuthStatus('authenticated'); }
+      else { setError('Incorrect passcode'); setPasscode(''); }
     }
   };
 
@@ -85,25 +62,20 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
     <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 text-center animate-in fade-in zoom-in duration-300">
       <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-sm shadow-2xl relative">
         <button onClick={() => setShowInfo(!showInfo)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><Info size={20} /></button>
-
         {showInfo && (
           <div className="absolute inset-0 bg-slate-950/95 rounded-3xl p-6 z-10 flex flex-col items-center justify-center text-left">
-            <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2 w-full"><Info size={18} /> Storage Info</h3>
-            <div className="space-y-4 text-xs text-slate-400">
-              <p><strong className="text-blue-400">Raghu:</strong> Syncs to Supabase Cloud.</p>
-              <p><strong className="text-emerald-400">Others:</strong> Stored locally on this device.</p>
+            <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2 w-full text-sm"><Info size={18} /> Storage Comparison</h3>
+            <div className="space-y-4 text-[10px] text-slate-400">
+              <p><strong className="text-blue-400">Login as Raghu:</strong> Syncs to Supabase Cloud. Access from any device.</p>
+              <p><strong className="text-emerald-400">Login as Others:</strong> Stored locally. Privacy-focused.</p>
             </div>
             <button onClick={() => setShowInfo(false)} className="mt-6 bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold">Close</button>
           </div>
         )}
-
-        <div className="mb-8 text-center">
-           <div className="bg-slate-800 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-inner">
-             <TrendingUp className="text-blue-500" size={32} />
-           </div>
+        <div className="mb-8">
+           <div className="bg-slate-800 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-inner"><TrendingUp className="text-blue-500" size={32} /></div>
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Ledger Pro</h1>
         </div>
-
         {view === 'choice' && (
           <div className="space-y-3">
             <button onClick={() => setView('raghu')} className="w-full flex items-center gap-4 bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl transition border border-slate-700/50 group">
@@ -116,27 +88,22 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
             </button>
           </div>
         )}
-
         {view === 'raghu' && (
           <form onSubmit={handleRaghuLogin} className="space-y-4">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
             {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
             <button type="submit" className="w-full bg-blue-600 text-white font-black py-3 rounded-xl">Sign In</button>
-            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold">Back</button>
+            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold mt-2">Back</button>
           </form>
         )}
-
         {view === 'others' && (
           <form onSubmit={handleOthersLogin} className="space-y-4">
             <p className="text-slate-400 text-xs px-2 mb-2 text-center">{localStorage.getItem('appPasscode') ? 'Enter device passcode' : 'Create device passcode'}</p>
-            <input type="password" pattern="[0-9]*" inputMode="numeric" placeholder="****" value={passcode} onChange={e => setPasscode(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white" required autoFocus />
+            <input type="password" pattern="[0-9]*" inputMode="numeric" placeholder="****" value={passcode} onChange={e => setPasscode(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.5em] text-white" required autoFocus />
             {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
             <button type="submit" className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl">Unlock</button>
-            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold">Back</button>
+            <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold mt-2">Back</button>
           </form>
         )}
       </div>
@@ -144,169 +111,57 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
   );
 };
 
-const ExpenseTracker = () => {
-  const [authStatus, setAuthStatus] = useState('authenticating_check');
-  const [storageMode, setStorageMode] = useState('local'); 
-  const [user, setUser] = useState(null);
-  const [expenses, setExpenses] = useState([]);
-  const [categories] = useState(DEFAULT_CATEGORIES);
-  const [view, setView] = useState('overview'); 
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (!supabase) { setAuthStatus('login'); return; }
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        setStorageMode('supabase');
-        setAuthStatus('authenticated');
-      } else {
-        setAuthStatus('login');
-      }
-    };
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstalled(false);
-    });
-    if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null);
-        setIsInstalled(true);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (authStatus !== 'authenticated') return;
-      if (storageMode === 'local') {
-        const saved = localStorage.getItem('expenses');
-        setExpenses(saved ? JSON.parse(saved) : []);
-      } else {
-        const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-        if (!error && data) setExpenses(data);
-      }
-    };
-    loadData();
-  }, [authStatus, storageMode]);
-
-  useEffect(() => {
-    if (authStatus === 'authenticated' && storageMode === 'local') {
-      localStorage.setItem('expenses', JSON.stringify(expenses));
-    }
-  }, [expenses, authStatus, storageMode]);
-
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  const handleAddExpense = async () => {
-    if (!selectedCategory || !amount) return;
-    const newExpense = {
-      categoryId: selectedCategory,
-      amount: parseFloat(amount),
-      description: description || 'No description',
-      date: selectedDate,
-      user_id: user?.id || null,
-    };
-
-    if (storageMode === 'supabase' && supabase) {
-      const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
-      if (!error && data) setExpenses([data[0], ...expenses]);
-    } else {
-      const localExpense = { ...newExpense, id: Date.now() };
-      setExpenses([localExpense, ...expenses]);
-    }
-
-    setDescription('');
-    setAmount('');
-    setSelectedCategory(null);
-    setView('overview');
-  };
-
-  const handleDeleteExpense = async (id) => {
-    if (storageMode === 'supabase' && supabase) await supabase.from('expenses').delete().eq('id', id);
-    setExpenses(expenses.filter(e => e.id !== id));
-  };
-
-  const calculateTotal = (filter = null) => {
-    return expenses.filter(e => !filter || e.categoryId === filter).reduce((sum, e) => sum + e.amount, 0).toFixed(2);
-  };
-
-  const getExpensesByDate = (date) => expenses.filter(e => e.date === date);
-
-  const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  const daysInMonth = getDaysInMonth(currentMonth);
-  const firstDay = getFirstDayOfMonth(currentMonth);
-  const calendarDays = [];
-  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
-  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
-
-  const OverviewView = () => (
-    <div className="space-y-4 animate-in fade-in duration-500">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-white shadow-xl">
-        <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Total Spent</p>
-        <p className="text-3xl font-black">₹{calculateTotal()}</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {categories.map(cat => (
-          <div key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
-            className={`rounded-2xl p-4 cursor-pointer border transition-all ${categoryFilter === cat.id ? 'bg-blue-600 border-blue-400' : 'bg-slate-900 border-slate-800 hover:bg-slate-800'}`}>
-            <div className="flex items-center gap-2 mb-2"><span className="text-xl">{cat.emoji}</span><span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{cat.name}</span></div>
-            <p className="text-lg font-black text-white">₹{calculateTotal(cat.id)}</p>
-          </div>
-        ))}
-      </div>
-      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-        {expenses.filter(e => !categoryFilter || e.categoryId === categoryFilter).map(expense => {
-           const cat = categories.find(c => c.id === expense.categoryId);
-           return (
-             <div key={expense.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex justify-between items-center">
-               <div className="flex items-center gap-3">
-                 <div className="text-xl">{cat?.emoji}</div>
-                 <div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">{new Date(expense.date).toLocaleDateString()}</p></div>
-               </div>
-               <div className="flex items-center gap-3"><p className="text-sm font-black text-white">₹{expense.amount.toFixed(0)}</p><button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400"><X size={14}/></button></div>
-             </div>
-           );
-        })}
-      </div>
+const OverviewView = ({ expenses, categories, calculateTotal, categoryFilter, setCategoryFilter, handleDeleteExpense }) => (
+  <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-white shadow-xl">
+      <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">Total Spent</p>
+      <p className="text-3xl font-black">₹{calculateTotal()}</p>
     </div>
-  );
-
-  const AddExpenseView = () => (
-    <div className="space-y-4 animate-in zoom-in-95 duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-center">
-        <h2 className="text-white font-black mb-4 uppercase tracking-widest text-xs">New Expense</h2>
-        <div className="space-y-4">
-          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" />
-          <div className="grid grid-cols-4 gap-2">{categories.map(cat => (<button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`p-3 rounded-xl transition-all ${selectedCategory === cat.id ? 'bg-blue-600 shadow-lg scale-110' : 'bg-slate-800 hover:bg-slate-700'}`}><div className="text-xl">{cat.emoji}</div></button>))}</div>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-2xl font-black" />
-          <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" />
-          <div className="flex gap-2"><button onClick={handleAddExpense} disabled={!selectedCategory || !amount} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg disabled:opacity-50">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-black">Cancel</button></div>
+    <div className="grid grid-cols-2 gap-3">
+      {categories.map(cat => (
+        <div key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
+          className={`rounded-2xl p-4 cursor-pointer border transition-all ${categoryFilter === cat.id ? 'bg-blue-600 border-blue-400 shadow-lg' : 'bg-slate-900 border-slate-800 hover:bg-slate-800'}`}>
+          <div className="flex items-center gap-2 mb-2"><span className="text-xl">{cat.emoji}</span><span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{cat.name}</span></div>
+          <p className="text-lg font-black text-white">₹{calculateTotal(cat.id)}</p>
         </div>
+      ))}
+    </div>
+    <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+      {expenses.filter(e => !categoryFilter || e.categoryId === categoryFilter).map(expense => {
+         const cat = categories.find(c => c.id === expense.categoryId);
+         return (
+           <div key={expense.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex justify-between items-center group">
+             <div className="flex items-center gap-3">
+               <div className="text-xl">{cat?.emoji}</div>
+               <div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">{new Date(expense.date).toLocaleDateString()}</p></div>
+             </div>
+             <div className="flex items-center gap-3"><p className="text-sm font-black text-white">₹{expense.amount.toFixed(0)}</p><button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400 p-1"><X size={14}/></button></div>
+           </div>
+         );
+      })}
+    </div>
+  </div>
+);
+
+const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCategory, setSelectedCategory, amount, setAmount, description, setDescription, handleAddExpense, setView }) => (
+  <div className="space-y-4 animate-in zoom-in-95 duration-300">
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+      <h2 className="text-white font-black mb-4 uppercase tracking-widest text-xs text-center">New Record</h2>
+      <div className="space-y-4">
+        <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" />
+        <div className="grid grid-cols-4 gap-2">{categories.map(cat => (<button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`p-3 rounded-xl transition-all ${selectedCategory === cat.id ? 'bg-blue-600 shadow-lg scale-110' : 'bg-slate-800 hover:bg-slate-700'}`}><div className="text-xl">{cat.emoji}</div></button>))}</div>
+        <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-2xl font-black" />
+        <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" />
+        <div className="flex gap-2"><button onClick={handleAddExpense} disabled={!selectedCategory || !amount} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg disabled:opacity-50">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-black">Cancel</button></div>
       </div>
     </div>
-  );
+  </div>
+);
 
-  const CalendarView = () => (
+const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
+  const dateExpenses = expenses.filter(e => e.date === selectedDate);
+  
+  return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
           <div className="flex justify-between items-center mb-6">
@@ -319,33 +174,168 @@ const ExpenseTracker = () => {
              {calendarDays.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
                 const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const hasExpense = getExpensesByDate(dateStr).length > 0;
-                return (<button key={day} onClick={() => { setSelectedDate(dateStr); setView('overview'); }} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white font-black' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
+                const hasExpense = expenses.some(e => e.date === dateStr);
+                return (<button key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white font-black shadow-lg' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
              })}
           </div>
        </div>
-       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black">Back</button>
+
+       {/* Date specific expenses shown under calendar */}
+       <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-2">Expenses on {new Date(selectedDate).toLocaleDateString()}</p>
+          <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+            {dateExpenses.map(expense => {
+              const cat = categories.find(c => c.id === expense.categoryId);
+              return (
+                <div key={expense.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex justify-between items-center animate-in slide-in-from-left-2 duration-300">
+                  <div className="flex items-center gap-3">
+                    <div className="text-xl">{cat?.emoji}</div>
+                    <div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">₹{expense.amount.toFixed(0)}</p></div>
+                  </div>
+                  <button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400 p-1"><X size={14}/></button>
+                </div>
+              );
+            })}
+            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center font-bold">No records for this day</p>}
+          </div>
+       </div>
+       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Back to Dashboard</button>
     </div>
   );
+};
 
-  if (authStatus === 'authenticating_check') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black">AUTHENTICATING...</div>;
+// --- MAIN APP ---
+
+const ExpenseTracker = () => {
+  const [authStatus, setAuthStatus] = useState('authenticating_check');
+  const [storageMode, setStorageMode] = useState('local'); 
+  const [user, setUser] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [categories] = useState(DEFAULT_CATEGORIES);
+  const [view, setView] = useState('overview'); 
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Sync state
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!supabase) { setAuthStatus('login'); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+        setStorageMode('supabase');
+        setAuthStatus('authenticated');
+      } else { setAuthStatus('login'); }
+    };
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); setIsInstalled(false); });
+    if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') { setDeferredPrompt(null); setIsInstalled(true); }
+    }
+  };
+
+  const loadData = async () => {
+    if (authStatus !== 'authenticated') return;
+    if (storageMode === 'local') {
+      const saved = localStorage.getItem('expenses');
+      setExpenses(saved ? JSON.parse(saved) : []);
+    } else if (supabase) {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (!error && data) setExpenses(data);
+    }
+  };
+
+  useEffect(() => { loadData(); }, [authStatus, storageMode]);
+
+  useEffect(() => {
+    if (authStatus === 'authenticated' && storageMode === 'local') {
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+    }
+  }, [expenses, authStatus, storageMode]);
+
+  const handleAddExpense = async () => {
+    if (!selectedCategory || !amount) return;
+    const newExpense = { categoryId: selectedCategory, amount: parseFloat(amount), description: description || 'No description', date: selectedDate, user_id: user?.id || null };
+    if (storageMode === 'supabase' && supabase) {
+      const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
+      if (!error && data) setExpenses([data[0], ...expenses]);
+    } else {
+      const localExpense = { ...newExpense, id: Date.now() };
+      setExpenses([localExpense, ...expenses]);
+    }
+    setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (storageMode === 'supabase' && supabase) await supabase.from('expenses').delete().eq('id', id);
+    setExpenses(expenses.filter(e => e.id !== id));
+  };
+
+  const handleLogout = async () => {
+    if (supabase) await supabase.auth.signOut();
+    localStorage.removeItem('appPasscode'); // Reset device session too for security
+    window.location.reload();
+  };
+
+  const calculateTotal = (filter = null) => {
+    return expenses.filter(e => !filter || e.categoryId === filter).reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+  };
+
+  const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  const daysInMonth = getDaysInMonth(currentMonth);
+  const firstDay = getFirstDayOfMonth(currentMonth);
+  const calendarDays = [];
+  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+
+  if (authStatus === 'authenticating_check') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black">SYNCING...</div>;
   if (authStatus === 'login') return <div className="min-h-screen bg-slate-950"><LoginView setAuthStatus={setAuthStatus} setStorageMode={setStorageMode} setUser={setUser} /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 font-sans">
+    <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
         <header className="flex justify-between items-center mb-8 pt-4">
-           <div><h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter"><TrendingUp className="text-blue-500" /> {storageMode === 'supabase' ? 'Raghu\'s Ledger' : 'Local Ledger'}</h1><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{storageMode === 'supabase' ? 'Cloud Sync Active' : 'Offline'}</p></div>
-           <div className="flex items-center gap-3"><button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>{isInstalled ? 'INSTALLED' : 'INSTALL'}</button><button onClick={() => { supabase?.auth.signOut(); window.location.reload(); }} className="bg-slate-900 p-2 rounded-full border border-slate-800 text-slate-500"><LogOut size={18}/></button></div>
+           <div><h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter"><TrendingUp className="text-blue-500" /> {storageMode === 'supabase' ? 'Cloud Ledger' : 'Local Ledger'}</h1><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{storageMode === 'supabase' ? 'Secure Sync' : 'Offline'}</p></div>
+           <div className="flex items-center gap-3">
+              <button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>{isInstalled ? 'INSTALLED' : 'INSTALL'}</button>
+              <button onClick={handleLogout} className="bg-slate-900 p-2 rounded-full border border-slate-800 text-slate-500 hover:text-white transition-colors"><LogOut size={18}/></button>
+           </div>
         </header>
-        {view === 'overview' && <OverviewView />}
-        {view === 'add' && <AddExpenseView />}
-        {view === 'calendar' && <CalendarView />}
+
+        {view === 'overview' && <OverviewView expenses={expenses} categories={DEFAULT_CATEGORIES} calculateTotal={calculateTotal} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
+        {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
+        {view === 'calendar' && <CalendarView currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} calendarDays={calendarDays} selectedDate={selectedDate} setSelectedDate={setSelectedDate} expenses={expenses} categories={DEFAULT_CATEGORIES} handleDeleteExpense={handleDeleteExpense} setView={setView} />}
+
         {view === 'overview' && (
-          <div className="fixed bottom-8 left-0 right-0 px-6"><div className="max-w-md mx-auto flex gap-4"><button onClick={() => setView('add')} className="flex-1 bg-blue-600 py-4 rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"><Plus strokeWidth={4} /> NEW RECORD</button><button onClick={() => setView('calendar')} className="bg-slate-900 border border-slate-800 px-6 py-4 rounded-2xl shadow-lg"><Calendar className="text-slate-400" /></button></div></div>
+          <div className="fixed bottom-8 left-0 right-0 px-6 z-50">
+            <div className="max-w-md mx-auto flex gap-4">
+               <button onClick={() => setView('add')} className="flex-1 bg-blue-600 py-4 rounded-2xl font-black shadow-2xl flex items-center justify-center gap-2 hover:scale-[1.05] active:scale-95 transition-all">
+                 <Plus strokeWidth={4} /> NEW RECORD
+               </button>
+               <button onClick={() => setView('calendar')} className="bg-slate-900 border border-slate-800 px-6 py-4 rounded-2xl shadow-lg hover:bg-slate-800 transition-colors">
+                 <Calendar className="text-slate-400" />
+               </button>
+            </div>
+          </div>
         )}
       </div>
-      {view === 'overview' && <div className="h-28" />}
     </div>
   );
 };
