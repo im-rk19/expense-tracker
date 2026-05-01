@@ -80,12 +80,18 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
 
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
   useEffect(() => {
     const saved = localStorage.getItem('local_expenses_v2');
     if (saved) {
       try { setExpenses(JSON.parse(saved)); } catch(e) { setExpenses([]); }
     }
     if (localStorage.getItem('isLoggedIn') === 'true') setIsAuth(true);
+
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); setIsInstalled(false); });
+    if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
   }, []);
 
   const save = (data) => {
@@ -138,25 +144,36 @@ export default function App() {
   if (!isAuth) return <LoginView onLogin={() => { localStorage.setItem('isLoggedIn', 'true'); setIsAuth(true); }} />;
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 pb-32 font-sans select-none overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white p-4 pb-48 font-sans select-none overflow-x-hidden">
       <div className="max-w-md mx-auto">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="bg-red-600/10 p-2 rounded-xl border border-red-600/20"><IndianRupee className="text-red-500" size={20} /></div>
-            <h1 className="text-lg font-black uppercase tracking-tighter">Tracker <span className="text-[8px] bg-red-600 px-1 rounded ml-1 tracking-normal">V2</span></h1>
+            <div className="bg-red-600/10 p-2 rounded-xl border border-red-600/20 shadow-[0_0_15px_rgba(220,38,38,0.1)]">
+              <IndianRupee className="text-red-500" size={20} strokeWidth={3} />
+            </div>
+            <h1 className="text-lg font-black uppercase tracking-tighter">Tracker</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={importCSV} className="p-2 text-slate-500"><Upload size={16}/></button>
-            <button onClick={exportCSV} className="p-2 text-slate-500"><Download size={16}/></button>
-            <button onClick={() => { localStorage.removeItem('isLoggedIn'); window.location.reload(); }} className="p-2 text-slate-500"><LogOut size={16}/></button>
+            <button onClick={importCSV} className="p-2 text-slate-500 hover:text-white transition-colors"><Upload size={18}/></button>
+            <button onClick={exportCSV} className="p-2 text-slate-500 hover:text-white transition-colors"><Download size={18}/></button>
+            <button onClick={() => { localStorage.removeItem('isLoggedIn'); window.location.reload(); }} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><LogOut size={18}/></button>
           </div>
         </header>
 
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
-          {["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"].map((m, i) => (
-            <button key={m} onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), i, 1))}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all border flex-shrink-0 ${currentMonth.getMonth() === i ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/20' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{m}</button>
-          ))}
+        {/* Fitbit Style Year/Month Navigation */}
+        <div className="mb-6 space-y-4">
+          <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-3">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() - 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500"><ChevronLeft size={20}/></button>
+            <span className="text-sm font-black tracking-[0.2em]">{currentMonth.getFullYear()}</span>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() + 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500"><ChevronRight size={20}/></button>
+          </div>
+          
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+            {["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"].map((m, i) => (
+              <button key={m} onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), i, 1))}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all border flex-shrink-0 ${currentMonth.getMonth() === i ? 'bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/20' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{m}</button>
+            ))}
+          </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-6 shadow-xl relative overflow-hidden group transition-all hover:border-red-600/50">
@@ -204,7 +221,7 @@ export default function App() {
                     const dStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const has = expenses.some(e => e.date === dStr);
                     return (
-                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
+                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
                     );
                   })}
                </div>
@@ -240,6 +257,16 @@ export default function App() {
               </div>
               <div className="flex gap-3"><button onClick={add} disabled={!amount || !selectedCategory} className="flex-[2] bg-red-600 py-5 rounded-2xl font-black uppercase disabled:opacity-30 tracking-widest shadow-xl shadow-red-600/20">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 py-5 rounded-2xl font-black uppercase text-[10px]">Cancel</button></div>
             </div>
+          </div>
+        )}
+
+        {/* Absolute Bottom Install Button */}
+        {!isInstalled && deferredPrompt && (
+          <div className="mt-20 px-4">
+             <button onClick={() => deferredPrompt.prompt()} className="w-full bg-slate-900 border border-red-600/30 text-red-500 font-black py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg animate-pulse">
+               Install Expense Tracker to Home Screen
+             </button>
+             <p className="text-center text-slate-700 text-[8px] mt-2 uppercase font-black tracking-widest">Recommended for best experience</p>
           </div>
         )}
 
