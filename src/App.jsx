@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert, RefreshCw, Smartphone } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyLqAWPxVEA5Gbd62lD4OrCmWc3HnPrhkoW_pCmCajKyCX6NzODAQPjaLWw7SjpKwcPBA/exec';
@@ -56,7 +56,7 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
         <div className="mb-8 text-center">
            <div className="bg-slate-800 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-inner"><TrendingUp className="text-blue-500" size={32} /></div>
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Ledger Pro</h1>
-           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Cross-Device Sync</p>
+           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Privacy Focused Tracking</p>
         </div>
         {view === 'choice' && (
           <div className="space-y-3">
@@ -101,7 +101,7 @@ const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handl
       </h1>
       <div className="flex items-center gap-2 mt-1">
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          {storageMode === 'cloud' ? 'Sync Active' : 'Offline Mode'}
+          {storageMode === 'cloud' ? 'Synced to Sheets' : 'Encrypted Locally'}
         </p>
         {storageMode === 'cloud' && (
           <button onClick={handleSync} className="text-slate-600 hover:text-blue-400 transition-colors">
@@ -111,8 +111,8 @@ const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handl
       </div>
     </div>
     <div className="flex items-center gap-3">
-       <button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border transition-all ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>
-         {isInstalled ? 'INSTALLED' : 'INSTALL'}
+       <button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border transition-all flex items-center gap-2 ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>
+         {isInstalled ? 'INSTALLED' : 'INSTALL APP'} <Smartphone size={12} />
        </button>
        <button onClick={handleLogout} className="bg-slate-900 p-2 rounded-full border border-slate-800 text-slate-500 hover:text-white transition-colors"><LogOut size={18}/></button>
     </div>
@@ -171,13 +171,7 @@ const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCat
 );
 
 const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
-  const dateExpenses = expenses.filter(e => {
-    // STRING COMPARISON to avoid Timezone Offset issues
-    const eDate = e.date.toString().substring(0, 10);
-    const sDate = selectedDate.toString().substring(0, 10);
-    return eDate === sDate;
-  });
-  
+  const dateExpenses = expenses.filter(e => e.date.toString().substring(0, 10) === selectedDate.toString().substring(0, 10));
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -208,7 +202,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
                 </div>
               );
             })}
-            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">No entries for this date</p>}
+            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">Empty</p>}
           </div>
        </div>
        <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Dashboard</button>
@@ -237,36 +231,63 @@ const ExpenseTracker = () => {
 
   // --- LOGIC ---
 
-  const loadDataFromCloud = useCallback(async () => {
-    setIsSyncing(true);
-    try {
-      const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
-      const data = await response.json();
-      const formatted = data.map(item => ({
-        ...item,
-        id: item.id || Math.random().toString(36).substr(2, 9),
-        categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
-      }));
-      setExpenses(formatted);
-      localStorage.setItem('expenses', JSON.stringify(formatted));
-    } catch (err) { console.error("Cloud fetch failed:", err); }
-    finally { setIsSyncing(false); }
+  const loadData = useCallback(async (mode) => {
+    if (mode === 'local') {
+      const saved = localStorage.getItem('expenses_local');
+      setExpenses(saved ? JSON.parse(saved) : []);
+    } else {
+      // Load cache first
+      const cached = localStorage.getItem('expenses_cloud_cache');
+      if (cached) setExpenses(JSON.parse(cached));
+      
+      setIsSyncing(true);
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
+        const data = await response.json();
+        const formatted = data.map(item => ({
+          ...item,
+          id: item.id || Math.random().toString(36).substr(2, 9),
+          categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
+        }));
+        setExpenses(formatted);
+        localStorage.setItem('expenses_cloud_cache', JSON.stringify(formatted));
+      } catch (err) { console.error("Cloud fetch failed:", err); }
+      finally { setIsSyncing(false); }
+    }
   }, []);
 
   useEffect(() => {
     const mode = localStorage.getItem('appMode');
-    const savedExpenses = localStorage.getItem('expenses');
-    if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-
     if (mode) {
       setStorageMode(mode);
       setAuthStatus('authenticated');
-      if (mode === 'cloud') loadDataFromCloud();
+      loadData(mode);
     } else { setAuthStatus('login'); }
 
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
+    const handleBeforeInstall = (e) => {
+      console.log("Install prompt captured");
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstalled(false);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
-  }, [loadDataFromCloud]);
+    
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, [loadData]);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setIsInstalled(true);
+      }
+    } else {
+      alert("To install: Open this in your browser menu (3 dots) and select 'Add to Home screen' or 'Install app'.");
+    }
+  };
 
   const handleAddExpense = async () => {
     if (!selectedCategory || !amount) return;
@@ -281,9 +302,11 @@ const ExpenseTracker = () => {
 
     const updatedExpenses = [newExpense, ...expenses];
     setExpenses(updatedExpenses);
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
-
-    if (storageMode === 'cloud') {
+    
+    if (storageMode === 'local') {
+      localStorage.setItem('expenses_local', JSON.stringify(updatedExpenses));
+    } else {
+      localStorage.setItem('expenses_cloud_cache', JSON.stringify(updatedExpenses));
       setIsSyncing(true);
       fetch(GOOGLE_SHEET_URL, {
         method: 'POST',
@@ -296,7 +319,7 @@ const ExpenseTracker = () => {
         })
       }).finally(() => {
          setIsSyncing(false);
-         loadDataFromCloud(); 
+         loadData('cloud'); 
       });
     }
 
@@ -307,21 +330,23 @@ const ExpenseTracker = () => {
     const expenseToDelete = expenses.find(e => e.id === id);
     const updated = expenses.filter(e => e.id !== id);
     setExpenses(updated);
-    localStorage.setItem('expenses', JSON.stringify(updated));
 
-    if (storageMode === 'cloud' && expenseToDelete) {
+    if (storageMode === 'local') {
+      localStorage.setItem('expenses_local', JSON.stringify(updated));
+    } else {
+      localStorage.setItem('expenses_cloud_cache', JSON.stringify(updated));
       setIsSyncing(true);
       fetch(GOOGLE_SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({
           action: 'delete',
-          description: expenseToDelete.description,
-          amount: expenseToDelete.amount
+          description: expenseToDelete?.description,
+          amount: expenseToDelete?.amount
         })
       }).finally(() => {
         setIsSyncing(false);
-        loadDataFromCloud();
+        loadData('cloud');
       });
     }
   };
@@ -348,7 +373,7 @@ const ExpenseTracker = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
-        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={loadDataFromCloud} />
+        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={handleInstallClick} handleLogout={handleLogout} handleSync={() => loadData('cloud')} />
 
         {view === 'overview' && <OverviewView total={totalSpent} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
         {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
