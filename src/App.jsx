@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert, RefreshCw } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyLqAWPxVEA5Gbd62lD4OrCmWc3HnPrhkoW_pCmCajKyCX6NzODAQPjaLWw7SjpKwcPBA/exec';
@@ -15,7 +15,7 @@ const DEFAULT_CATEGORIES = [
   { id: 8, name: 'Miscellaneous', emoji: '📌' },
 ];
 
-// --- STANDALONE COMPONENTS (To fix keyboard focus bug) ---
+// --- STANDALONE COMPONENTS ---
 
 const LoginView = ({ setAuthStatus, setStorageMode }) => {
   const [view, setView] = useState('choice'); 
@@ -58,7 +58,6 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Ledger Pro</h1>
            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Cross-Device Sync</p>
         </div>
-
         {view === 'choice' && (
           <div className="space-y-3">
             <button onClick={() => setView('raghu')} className="w-full flex items-center gap-4 bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl transition border border-slate-700/50">
@@ -71,7 +70,6 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
             </button>
           </div>
         )}
-
         {view === 'raghu' && (
           <form onSubmit={handleRaghuLogin} className="space-y-4">
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm" required />
@@ -81,7 +79,6 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
             <button type="button" onClick={() => setView('choice')} className="text-slate-500 text-[10px] block mx-auto font-bold mt-2">Back</button>
           </form>
         )}
-
         {view === 'others' && (
           <form onSubmit={handleOthersLogin} className="space-y-4">
             <p className="text-slate-400 text-xs px-2 mb-2">{localStorage.getItem('appPasscode') ? 'Enter passcode' : 'Create passcode'}</p>
@@ -96,14 +93,15 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
   );
 };
 
-const Header = ({ storageMode, isInstalled, handleInstallClick, handleLogout }) => (
+const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handleLogout, handleSync }) => (
   <header className="flex justify-between items-center mb-8 pt-4">
     <div>
       <h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter">
-        <TrendingUp className="text-blue-500" /> {storageMode === 'cloud' ? 'Raghu\'s Ledger' : 'Local Ledger'}
+        <TrendingUp className="text-blue-500" /> {storageMode === 'cloud' ? 'Cloud Ledger' : 'Local Ledger'}
       </h1>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-        {storageMode === 'cloud' ? 'Cloud Sync Active' : 'Offline Mode'}
+      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+        {storageMode === 'cloud' ? 'Syncing to Sheets' : 'Offline Mode'}
+        {storageMode === 'cloud' && <RefreshCw size={10} className={isSyncing ? 'animate-spin' : ''} onClick={handleSync} />}
       </p>
     </div>
     <div className="flex items-center gap-3">
@@ -172,7 +170,6 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
     const d2 = new Date(selectedDate).toISOString().split('T')[0];
     return d1 === d2;
   });
-  
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -206,7 +203,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
             {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">Empty</p>}
           </div>
        </div>
-       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black">Dashboard</button>
+       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Dashboard</button>
     </div>
   );
 };
@@ -218,6 +215,7 @@ const ExpenseTracker = () => {
   const [storageMode, setStorageMode] = useState('local'); 
   const [expenses, setExpenses] = useState([]);
   const [view, setView] = useState('overview'); 
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
@@ -236,20 +234,23 @@ const ExpenseTracker = () => {
       const saved = localStorage.getItem('expenses');
       setExpenses(saved ? JSON.parse(saved) : []);
     } else {
+      setIsSyncing(true);
       try {
-        const response = await fetch(GOOGLE_SHEET_URL);
+        const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
         const data = await response.json();
-        // Convert category names back to IDs
         const formatted = data.map(item => ({
           ...item,
+          id: item.id || Math.random().toString(36).substr(2, 9),
           categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
         }));
         setExpenses(formatted);
+        localStorage.setItem('expenses', JSON.stringify(formatted)); // Cache cloud data locally
       } catch (err) {
         console.error("Cloud fetch failed:", err);
-        // Fallback to local if cloud fails
         const saved = localStorage.getItem('expenses');
-        setExpenses(saved ? JSON.parse(saved) : []);
+        if (saved) setExpenses(JSON.parse(saved));
+      } finally {
+        setIsSyncing(false);
       }
     }
   }, []);
@@ -272,7 +273,7 @@ const ExpenseTracker = () => {
     if (!selectedCategory || !amount) return;
     const cat = DEFAULT_CATEGORIES.find(c => c.id === selectedCategory);
     const newExpense = { 
-      id: Date.now(),
+      id: Date.now().toString(),
       categoryId: selectedCategory, 
       amount: parseFloat(amount), 
       description: description || 'No description', 
@@ -284,26 +285,46 @@ const ExpenseTracker = () => {
     localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
 
     if (storageMode === 'cloud') {
-      fetch(GOOGLE_SHEET_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({
-          date: selectedDate,
-          amount: parseFloat(amount),
-          description: description || 'No description',
-          categoryName: cat?.name || 'Miscellaneous'
-        })
-      });
+      setIsSyncing(true);
+      try {
+        await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            date: selectedDate,
+            amount: parseFloat(amount),
+            description: description || 'No description',
+            categoryName: cat?.name || 'Miscellaneous'
+          })
+        });
+      } catch (err) { console.error("Sync error:", err); }
+      finally { setIsSyncing(false); }
     }
 
     setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
   };
 
-  const handleDeleteExpense = (id) => {
+  const handleDeleteExpense = async (id) => {
+    const expenseToDelete = expenses.find(e => e.id === id);
     const updated = expenses.filter(e => e.id !== id);
     setExpenses(updated);
     localStorage.setItem('expenses', JSON.stringify(updated));
-    // Note: Deletion from Google Sheet is not implemented in this simple script for safety
+
+    if (storageMode === 'cloud' && expenseToDelete) {
+      setIsSyncing(true);
+      try {
+        await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            action: 'delete',
+            description: expenseToDelete.description,
+            amount: expenseToDelete.amount
+          })
+        });
+      } catch (err) { console.error("Delete sync error:", err); }
+      finally { setIsSyncing(false); }
+    }
   };
 
   const handleLogout = () => {
@@ -328,7 +349,7 @@ const ExpenseTracker = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
-        <Header storageMode={storageMode} isInstalled={isInstalled} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} />
+        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={() => loadData(storageMode)} />
 
         {view === 'overview' && <OverviewView total={total} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
         {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
