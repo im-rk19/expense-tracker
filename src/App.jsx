@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, IndianRupee, Calendar as CalendarIcon, LogOut, Download, Upload, Trash2, PieChart, Info, Smartphone, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, IndianRupee, Calendar as CalendarIcon, LogOut, Download, Upload, Trash2, PieChart, Info, Smartphone, TrendingUp, Zap } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const DEFAULT_CATEGORIES = [
@@ -49,7 +49,7 @@ const LoginView = ({ onLogin, deferredPrompt }) => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
     } else {
-      alert("To install manually:\n1. Open your browser menu (3 dots or share icon)\n2. Select 'Add to Home Screen' or 'Install App'");
+      alert("Browser Install Not Ready Yet.\n\nIF ON ANDROID: Wait 5 seconds and try again.\n\nIF ON IPHONE: Safari blocks the 'Install' button. You MUST tap the Share icon (square with arrow) and select 'Add to Home Screen'.");
     }
   };
 
@@ -73,9 +73,12 @@ const LoginView = ({ onLogin, deferredPrompt }) => {
         </form>
 
         <div className="mt-12 pt-6 border-t border-slate-900">
-           <button onClick={handleInstall} className="w-full bg-slate-900 border border-slate-800 text-slate-500 py-3 rounded-xl uppercase text-[9px] font-black tracking-widest flex items-center justify-center gap-2">
-             <Smartphone size={12}/> Install App to Home Screen
+           <button onClick={handleInstall} 
+             className={`w-full py-3 rounded-xl uppercase text-[9px] font-black tracking-widest flex items-center justify-center gap-2 transition-all ${deferredPrompt ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>
+             <Smartphone size={12}/> {deferredPrompt ? 'Official App Install Ready!' : 'Install to Home Screen'}
+             {deferredPrompt && <Zap size={10} fill="currentColor" />}
            </button>
+           {!deferredPrompt && <p className="text-[8px] text-slate-700 mt-2 uppercase font-black tracking-widest">Wait 5s for auto-install button to turn red</p>}
         </div>
       </div>
     </div>
@@ -103,10 +106,14 @@ export default function App() {
     }
     if (localStorage.getItem('isLoggedIn') === 'true') setIsAuth(true);
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const handlePrompt = (e) => {
+      console.log("SUCCESS: PWA Prompt Captured");
       e.preventDefault();
       setDeferredPrompt(e);
-    });
+    };
+
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
   }, []);
 
   const save = (data) => {
@@ -244,7 +251,7 @@ export default function App() {
               <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest px-2">{selectedDate}</p>
               {expenses.filter(e => e.date === selectedDate).map(e => (
                 <div key={e.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl flex justify-between items-center">
-                  <div className="flex items-center gap-4"><span className="text-xl">{DEFAULT_CATEGORIES.find(c => c.id === e.categoryId)?.emoji}</span><p className="text-sm font-bold">{e.description}</p></div>
+                  <div className="flex items-center gap-3"><span className="text-xl">{DEFAULT_CATEGORIES.find(c => c.id === e.categoryId)?.emoji}</span><p className="text-sm font-bold">{e.description}</p></div>
                   <p className="text-lg font-black">₹{e.amount}</p>
                 </div>
               ))}
