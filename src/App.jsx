@@ -101,12 +101,10 @@ const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handl
       </h1>
       <div className="flex items-center gap-2 mt-1">
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          {storageMode === 'cloud' ? 'Synced to Sheets' : 'Encrypted Locally'}
+          {storageMode === 'cloud' ? 'Auto-Syncing...' : 'Local Only'}
         </p>
         {storageMode === 'cloud' && (
-          <button onClick={handleSync} className="text-slate-600 hover:text-blue-400 transition-colors">
-            <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-          </button>
+          <RefreshCw size={12} className={`text-slate-600 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} onClick={handleSync} />
         )}
       </div>
     </div>
@@ -171,7 +169,7 @@ const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCat
 );
 
 const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
-  const dateExpenses = expenses.filter(e => e.date.toString().substring(0, 10) === selectedDate.toString().substring(0, 10));
+  const dateExpenses = expenses.filter(e => String(e.date).substring(0, 10) === String(selectedDate).substring(0, 10));
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -185,7 +183,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
              {calendarDays.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
                 const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const hasExpense = expenses.some(e => e.date.toString().substring(0, 10) === dateStr);
+                const hasExpense = expenses.some(e => String(e.date).substring(0, 10) === dateStr);
                 return (<button key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white font-black shadow-lg' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
              })}
           </div>
@@ -231,69 +229,54 @@ const ExpenseTracker = () => {
 
   // --- LOGIC ---
 
-  const loadData = useCallback(async (mode) => {
-    if (mode === 'local') {
-      const saved = localStorage.getItem('expenses_local');
-      setExpenses(saved ? JSON.parse(saved) : []);
-    } else {
-      // Load cache first
-      const cached = localStorage.getItem('expenses_cloud_cache');
-      if (cached) setExpenses(JSON.parse(cached));
-      
-      setIsSyncing(true);
-      try {
-        const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
-        const data = await response.json();
-        const formatted = data.map(item => ({
-          ...item,
-          id: item.id || Math.random().toString(36).substr(2, 9),
-          categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
-        }));
-        setExpenses(formatted);
-        localStorage.setItem('expenses_cloud_cache', JSON.stringify(formatted));
-      } catch (err) { console.error("Cloud fetch failed:", err); }
-      finally { setIsSyncing(false); }
-    }
+  const loadDataFromCloud = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
+      const data = await response.json();
+      const formatted = data.map(item => ({
+        ...item,
+        id: "cloud_" + Math.random().toString(36).substr(2, 9),
+        categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
+      }));
+      setExpenses(formatted);
+      localStorage.setItem('expenses_cloud_cache', JSON.stringify(formatted));
+    } catch (err) { console.error("Cloud fetch failed:", err); }
+    finally { setIsSyncing(false); }
   }, []);
 
+  const loadLocalData = useCallback(() => {
+    const saved = localStorage.getItem('expenses_local');
+    setExpenses(saved ? JSON.parse(saved) : []);
+  }, []);
+
+  // AUTO-SYNC on Auth State Change
   useEffect(() => {
     const mode = localStorage.getItem('appMode');
     if (mode) {
       setStorageMode(mode);
       setAuthStatus('authenticated');
-      loadData(mode);
+      if (mode === 'cloud') {
+         // Load cache first, then fetch
+         const cached = localStorage.getItem('expenses_cloud_cache');
+         if (cached) setExpenses(JSON.parse(cached));
+         loadDataFromCloud();
+      } else {
+         loadLocalData();
+      }
     } else { setAuthStatus('login'); }
 
-    const handleBeforeInstall = (e) => {
-      console.log("Install prompt captured");
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstalled(false);
-    };
+    const handleBeforeInstall = (e) => { e.preventDefault(); setDeferredPrompt(e); setIsInstalled(false); };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
-    
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-  }, [loadData]);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null);
-        setIsInstalled(true);
-      }
-    } else {
-      alert("To install: Open this in your browser menu (3 dots) and select 'Add to Home screen' or 'Install app'.");
-    }
-  };
+  }, [loadDataFromCloud, loadLocalData]);
 
   const handleAddExpense = async () => {
     if (!selectedCategory || !amount) return;
     const cat = DEFAULT_CATEGORIES.find(c => c.id === selectedCategory);
     const newExpense = { 
-      id: "local_" + Date.now().toString(),
+      id: "temp_" + Date.now().toString(),
       categoryId: selectedCategory, 
       amount: parseFloat(amount), 
       description: description || 'No description', 
@@ -318,11 +301,9 @@ const ExpenseTracker = () => {
           categoryName: cat?.name || 'Miscellaneous'
         })
       }).finally(() => {
-         setIsSyncing(false);
-         loadData('cloud'); 
+         loadDataFromCloud(); // Auto-refresh after add
       });
     }
-
     setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
   };
 
@@ -345,8 +326,7 @@ const ExpenseTracker = () => {
           amount: expenseToDelete?.amount
         })
       }).finally(() => {
-        setIsSyncing(false);
-        loadData('cloud');
+        loadDataFromCloud(); // Auto-refresh after delete
       });
     }
   };
@@ -373,7 +353,7 @@ const ExpenseTracker = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
-        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={handleInstallClick} handleLogout={handleLogout} handleSync={() => loadData('cloud')} />
+        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={loadDataFromCloud} />
 
         {view === 'overview' && <OverviewView total={totalSpent} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
         {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
