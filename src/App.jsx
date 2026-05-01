@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURATION ---
 // User should replace these with their own Supabase credentials
-const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co'; 
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://ylvuvillspfkfillmmrqqz.supabase.co'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsdnV2aWxscGZrZmlsbW1ycXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDkyNTksImV4cCI6MjA5MzIyNTI1OX0.42JPnnQlE0oh2X0WE3rK9TQ52qHDe63ocuoY48kSw0w';
 
 let supabase = null;
 try {
