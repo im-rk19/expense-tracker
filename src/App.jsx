@@ -172,10 +172,12 @@ const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCat
 
 const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
   const dateExpenses = expenses.filter(e => {
-    const d1 = new Date(e.date).toISOString().split('T')[0];
-    const d2 = new Date(selectedDate).toISOString().split('T')[0];
-    return d1 === d2;
+    // STRING COMPARISON to avoid Timezone Offset issues
+    const eDate = e.date.toString().substring(0, 10);
+    const sDate = selectedDate.toString().substring(0, 10);
+    return eDate === sDate;
   });
+  
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -189,7 +191,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
              {calendarDays.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
                 const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const hasExpense = expenses.some(e => new Date(e.date).toISOString().split('T')[0] === dateStr);
+                const hasExpense = expenses.some(e => e.date.toString().substring(0, 10) === dateStr);
                 return (<button key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white font-black shadow-lg' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
              })}
           </div>
@@ -206,7 +208,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
                 </div>
               );
             })}
-            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">Empty</p>}
+            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">No entries for this date</p>}
           </div>
        </div>
        <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Dashboard</button>
@@ -246,30 +248,21 @@ const ExpenseTracker = () => {
         categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
       }));
       setExpenses(formatted);
-      localStorage.setItem('expenses', JSON.stringify(formatted)); // Always keep local cache updated
-    } catch (err) {
-      console.error("Cloud fetch failed:", err);
-    } finally {
-      setIsSyncing(false);
-    }
+      localStorage.setItem('expenses', JSON.stringify(formatted));
+    } catch (err) { console.error("Cloud fetch failed:", err); }
+    finally { setIsSyncing(false); }
   }, []);
 
   useEffect(() => {
     const mode = localStorage.getItem('appMode');
     const savedExpenses = localStorage.getItem('expenses');
-    
-    // INSTANT LOAD from local cache
-    if (savedExpenses) {
-      setExpenses(JSON.parse(savedExpenses));
-    }
+    if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
 
     if (mode) {
       setStorageMode(mode);
       setAuthStatus('authenticated');
       if (mode === 'cloud') loadDataFromCloud();
-    } else {
-      setAuthStatus('login');
-    }
+    } else { setAuthStatus('login'); }
 
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
@@ -286,7 +279,6 @@ const ExpenseTracker = () => {
       date: selectedDate 
     };
 
-    // OPTIMISTIC UPDATE (Instant UI change)
     const updatedExpenses = [newExpense, ...expenses];
     setExpenses(updatedExpenses);
     localStorage.setItem('expenses', JSON.stringify(updatedExpenses));
@@ -304,7 +296,7 @@ const ExpenseTracker = () => {
         })
       }).finally(() => {
          setIsSyncing(false);
-         loadDataFromCloud(); // Background refresh to get clean cloud data
+         loadDataFromCloud(); 
       });
     }
 
@@ -313,8 +305,6 @@ const ExpenseTracker = () => {
 
   const handleDeleteExpense = async (id) => {
     const expenseToDelete = expenses.find(e => e.id === id);
-    
-    // OPTIMISTIC UPDATE (Instant UI change)
     const updated = expenses.filter(e => e.id !== id);
     setExpenses(updated);
     localStorage.setItem('expenses', JSON.stringify(updated));
@@ -331,7 +321,7 @@ const ExpenseTracker = () => {
         })
       }).finally(() => {
         setIsSyncing(false);
-        loadDataFromCloud(); // Background refresh
+        loadDataFromCloud();
       });
     }
   };
