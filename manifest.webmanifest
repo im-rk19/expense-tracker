@@ -1,0 +1,1 @@
+{"name":"Expense Tracker","short_name":"Expenses","description":"Track your expenses locally","start_url":"./","display":"standalone","background_color":"#030712","theme_color":"#0f172a","lang":"en","scope":"./","icons":[{"src":"icon.png","sizes":"192x192 512x512","type":"image/png","purpose":"any maskable"}]}
