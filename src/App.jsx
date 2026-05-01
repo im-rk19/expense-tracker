@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURATION ---
-const SUPABASE_URL = 'https://ylvuvillpfkfilmmrqqz.supabase.co'; 
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsdnV2aWxscGZrZmlsbW1ycXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NDkyNTksImV4cCI6MjA5MzIyNTI1OX0.42JPnnQlE0oh2X0WE3rK9TQ52qHDe63ocuoY48kSw0w';
-
-let supabase = null;
-try {
-  if (SUPABASE_URL.startsWith('https://')) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  }
-} catch (e) {
-  console.error('Supabase initialization failed:', e);
-}
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxFvRubylLLG_Fu-pJl961TmMFQ2j_8zuEd2-Yqw4hst0WCxhiqU0VJc6SunoMIS8LFvw/exec';
 
 const DEFAULT_CATEGORIES = [
   { id: 1, name: 'Food', emoji: '🍔', color: '#FF6B6B' },
@@ -26,30 +15,30 @@ const DEFAULT_CATEGORIES = [
   { id: 8, name: 'Miscellaneous', emoji: '📌', color: '#C7CEEA' },
 ];
 
-// --- VIEW COMPONENTS (Moved outside to fix keyboard focus bug) ---
+// --- VIEW COMPONENTS ---
 
-const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
+const LoginView = ({ setAuthStatus, setStorageMode }) => {
   const [view, setView] = useState('choice'); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
-  const [showInfo, setShowInfo] = useState(false);
 
-  const handleRaghuLogin = async (e) => {
+  const handleRaghuLogin = (e) => {
     e.preventDefault();
-    setError('');
-    if (!supabase) { setError('Configuration error.'); return; }
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) { setError(authError.message); } 
-    else { setStorageMode('supabase'); setUser(data.user); setAuthStatus('authenticated'); }
+    if (email === 'raghukrishnanj2601@gmail.com' && password === 'niveditha') {
+      setStorageMode('cloud');
+      setAuthStatus('authenticated');
+    } else {
+      setError('Invalid Raghu credentials');
+    }
   };
 
   const handleOthersLogin = (e) => {
     e.preventDefault();
     const saved = localStorage.getItem('appPasscode');
     if (!saved) {
-      if (passcode.length < 4) { setError('Passcode must be at least 4 digits'); return; }
+      if (passcode.length < 4) { setError('Passcode must be 4+ digits'); return; }
       localStorage.setItem('appPasscode', passcode);
       setStorageMode('local'); setAuthStatus('authenticated');
     } else {
@@ -60,27 +49,17 @@ const LoginView = ({ setAuthStatus, setStorageMode, setUser }) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] p-4 text-center animate-in fade-in zoom-in duration-300">
-      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-sm shadow-2xl relative">
-        <button onClick={() => setShowInfo(!showInfo)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><Info size={20} /></button>
-        {showInfo && (
-          <div className="absolute inset-0 bg-slate-950/95 rounded-3xl p-6 z-10 flex flex-col items-center justify-center text-left">
-            <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2 w-full text-sm"><Info size={18} /> Storage Comparison</h3>
-            <div className="space-y-4 text-[10px] text-slate-400">
-              <p><strong className="text-blue-400">Login as Raghu:</strong> Syncs to Supabase Cloud. Access from any device.</p>
-              <p><strong className="text-emerald-400">Login as Others:</strong> Stored locally. Privacy-focused.</p>
-            </div>
-            <button onClick={() => setShowInfo(false)} className="mt-6 bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold">Close</button>
-          </div>
-        )}
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-sm shadow-2xl">
         <div className="mb-8">
            <div className="bg-slate-800 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-inner"><TrendingUp className="text-blue-500" size={32} /></div>
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Ledger Pro</h1>
+           <p className="text-[10px] text-slate-500 font-bold mt-1">SINK TO GOOGLE SHEETS</p>
         </div>
         {view === 'choice' && (
           <div className="space-y-3">
             <button onClick={() => setView('raghu')} className="w-full flex items-center gap-4 bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl transition border border-slate-700/50 group">
               <div className="bg-blue-500/20 p-2 rounded-xl"><User className="text-blue-400" /></div>
-              <div className="text-left"><p className="text-white font-bold">Login as Raghu</p><p className="text-slate-500 text-[10px]">Cloud Sync</p></div>
+              <div className="text-left"><p className="text-white font-bold">Login as Raghu</p><p className="text-slate-500 text-[10px]">Cloud Sync (Sheets)</p></div>
             </button>
             <button onClick={() => setView('others')} className="w-full flex items-center gap-4 bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl transition border border-slate-700/50 group">
               <div className="bg-emerald-500/20 p-2 rounded-xl"><Users className="text-emerald-400" /></div>
@@ -160,7 +139,6 @@ const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCat
 
 const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
   const dateExpenses = expenses.filter(e => e.date === selectedDate);
-  
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -179,8 +157,6 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
              })}
           </div>
        </div>
-
-       {/* Date specific expenses shown under calendar */}
        <div className="space-y-2">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-2">Expenses on {new Date(selectedDate).toLocaleDateString()}</p>
           <div className="space-y-2 max-h-[30vh] overflow-y-auto">
@@ -199,7 +175,7 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
             {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center font-bold">No records for this day</p>}
           </div>
        </div>
-       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Back to Dashboard</button>
+       <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Dashboard</button>
     </div>
   );
 };
@@ -207,16 +183,13 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
 // --- MAIN APP ---
 
 const ExpenseTracker = () => {
-  const [authStatus, setAuthStatus] = useState('authenticating_check');
+  const [authStatus, setAuthStatus] = useState('login');
   const [storageMode, setStorageMode] = useState('local'); 
-  const [user, setUser] = useState(null);
   const [expenses, setExpenses] = useState([]);
-  const [categories] = useState(DEFAULT_CATEGORIES);
   const [view, setView] = useState('overview'); 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
-  // Sync state
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [description, setDescription] = useState('');
@@ -225,16 +198,11 @@ const ExpenseTracker = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!supabase) { setAuthStatus('login'); return; }
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        setStorageMode('supabase');
-        setAuthStatus('authenticated');
-      } else { setAuthStatus('login'); }
-    };
-    checkAuth();
+    const savedMode = localStorage.getItem('appMode');
+    if (savedMode) setStorageMode(savedMode);
+    
+    const savedExpenses = localStorage.getItem('expenses');
+    if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
   }, []);
 
   useEffect(() => {
@@ -250,46 +218,48 @@ const ExpenseTracker = () => {
     }
   };
 
-  const loadData = async () => {
-    if (authStatus !== 'authenticated') return;
-    if (storageMode === 'local') {
-      const saved = localStorage.getItem('expenses');
-      setExpenses(saved ? JSON.parse(saved) : []);
-    } else if (supabase) {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (!error && data) setExpenses(data);
-    }
-  };
-
-  useEffect(() => { loadData(); }, [authStatus, storageMode]);
-
-  useEffect(() => {
-    if (authStatus === 'authenticated' && storageMode === 'local') {
-      localStorage.setItem('expenses', JSON.stringify(expenses));
-    }
-  }, [expenses, authStatus, storageMode]);
-
   const handleAddExpense = async () => {
     if (!selectedCategory || !amount) return;
-    const newExpense = { categoryId: selectedCategory, amount: parseFloat(amount), description: description || 'No description', date: selectedDate, user_id: user?.id || null };
-    if (storageMode === 'supabase' && supabase) {
-      const { data, error } = await supabase.from('expenses').insert([newExpense]).select();
-      if (!error && data) setExpenses([data[0], ...expenses]);
-    } else {
-      const localExpense = { ...newExpense, id: Date.now() };
-      setExpenses([localExpense, ...expenses]);
+    const cat = DEFAULT_CATEGORIES.find(c => c.id === selectedCategory);
+    const newExpense = { 
+      id: Date.now(),
+      categoryId: selectedCategory, 
+      amount: parseFloat(amount), 
+      description: description || 'No description', 
+      date: selectedDate 
+    };
+
+    const newExpenses = [newExpense, ...expenses];
+    setExpenses(newExpenses);
+    localStorage.setItem('expenses', JSON.stringify(newExpenses));
+
+    // IF CLOUD MODE: Sync to Google Sheets
+    if (storageMode === 'cloud') {
+      fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Essential for Google Apps Script
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDate,
+          amount: parseFloat(amount),
+          description: description || 'No description',
+          categoryName: cat?.name || 'General'
+        })
+      }).catch(err => console.error("Sheets sync failed:", err));
     }
+
     setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
   };
 
-  const handleDeleteExpense = async (id) => {
-    if (storageMode === 'supabase' && supabase) await supabase.from('expenses').delete().eq('id', id);
-    setExpenses(expenses.filter(e => e.id !== id));
+  const handleDeleteExpense = (id) => {
+    const newExpenses = expenses.filter(e => e.id !== id);
+    setExpenses(newExpenses);
+    localStorage.setItem('expenses', JSON.stringify(newExpenses));
   };
 
-  const handleLogout = async () => {
-    if (supabase) await supabase.auth.signOut();
-    localStorage.removeItem('appPasscode'); // Reset device session too for security
+  const handleLogout = () => {
+    localStorage.removeItem('appPasscode');
+    localStorage.removeItem('appMode');
     window.location.reload();
   };
 
@@ -305,14 +275,13 @@ const ExpenseTracker = () => {
   for (let i = 0; i < firstDay; i++) calendarDays.push(null);
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
-  if (authStatus === 'authenticating_check') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black">SYNCING...</div>;
-  if (authStatus === 'login') return <div className="min-h-screen bg-slate-950"><LoginView setAuthStatus={setAuthStatus} setStorageMode={setStorageMode} setUser={setUser} /></div>;
+  if (authStatus === 'login') return <div className="min-h-screen bg-slate-950"><LoginView setAuthStatus={setAuthStatus} setStorageMode={setStorageMode} /></div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
         <header className="flex justify-between items-center mb-8 pt-4">
-           <div><h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter"><TrendingUp className="text-blue-500" /> {storageMode === 'supabase' ? 'Cloud Ledger' : 'Local Ledger'}</h1><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{storageMode === 'supabase' ? 'Secure Sync' : 'Offline'}</p></div>
+           <div><h1 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tighter"><TrendingUp className="text-blue-500" /> {storageMode === 'cloud' ? 'Raghu\'s Sheet' : 'Local Ledger'}</h1><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{storageMode === 'cloud' ? 'Cloud Sync Active' : 'Offline Mode'}</p></div>
            <div className="flex items-center gap-3">
               <button onClick={handleInstallClick} className={`text-[10px] font-black px-4 py-2 rounded-full shadow-lg border ${isInstalled ? 'bg-slate-900 text-slate-500 border-slate-700' : 'bg-blue-600 text-white border-blue-400 animate-pulse'}`}>{isInstalled ? 'INSTALLED' : 'INSTALL'}</button>
               <button onClick={handleLogout} className="bg-slate-900 p-2 rounded-full border border-slate-800 text-slate-500 hover:text-white transition-colors"><LogOut size={18}/></button>
