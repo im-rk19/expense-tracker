@@ -28,7 +28,7 @@ const normalizeDate = (d) => {
   }
 };
 
-const LoginView = ({ onLogin }) => {
+const LoginView = ({ onLogin, deferredPrompt }) => {
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
 
@@ -45,6 +45,14 @@ const LoginView = ({ onLogin }) => {
     }
   };
 
+  const handleInstall = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+    } else {
+      alert("To install manually:\n1. Open your browser menu (3 dots or share icon)\n2. Select 'Add to Home Screen' or 'Install App'");
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black p-6">
       <div className="w-full max-w-sm text-center">
@@ -57,12 +65,18 @@ const LoginView = ({ onLogin }) => {
           <input 
             type="password" pattern="[0-9]*" inputMode="numeric" placeholder="••••" 
             value={passcode} onChange={e => setPasscode(e.target.value)} 
-            className="w-full bg-slate-900 border-b-2 border-slate-800 py-4 text-center text-4xl text-white outline-none focus:border-red-600"
+            className="w-full bg-slate-950 border-b-2 border-slate-800 py-4 text-center text-4xl text-white outline-none focus:border-red-600"
             autoFocus 
           />
           {error && <p className="text-red-500 text-[10px] font-bold uppercase">{error}</p>}
-          <button type="submit" className="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest shadow-lg">Unlock</button>
+          <button type="submit" className="w-full bg-red-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Unlock</button>
         </form>
+
+        <div className="mt-12 pt-6 border-t border-slate-900">
+           <button onClick={handleInstall} className="w-full bg-slate-900 border border-slate-800 text-slate-500 py-3 rounded-xl uppercase text-[9px] font-black tracking-widest flex items-center justify-center gap-2">
+             <Smartphone size={12}/> Install App to Home Screen
+           </button>
+        </div>
       </div>
     </div>
   );
@@ -80,7 +94,6 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   useEffect(() => {
@@ -90,8 +103,10 @@ export default function App() {
     }
     if (localStorage.getItem('isLoggedIn') === 'true') setIsAuth(true);
 
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); setIsInstalled(false); });
-    if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
   }, []);
 
   const save = (data) => {
@@ -141,17 +156,17 @@ export default function App() {
 
   const total = filtered.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0).toFixed(0);
 
-  if (!isAuth) return <LoginView onLogin={() => { localStorage.setItem('isLoggedIn', 'true'); setIsAuth(true); }} />;
+  if (!isAuth) return <LoginView onLogin={() => { localStorage.setItem('isLoggedIn', 'true'); setIsAuth(true); }} deferredPrompt={deferredPrompt} />;
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 pb-48 font-sans select-none overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white p-4 pb-32 font-sans select-none overflow-x-hidden">
       <div className="max-w-md mx-auto">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="bg-red-600/10 p-2 rounded-xl border border-red-600/20 shadow-[0_0_15px_rgba(220,38,38,0.1)]">
               <IndianRupee className="text-red-500" size={20} strokeWidth={3} />
             </div>
-            <h1 className="text-lg font-black uppercase tracking-tighter">Tracker</h1>
+            <h1 className="text-lg font-black uppercase tracking-tighter leading-none">Tracker</h1>
           </div>
           <div className="flex gap-2">
             <button onClick={importCSV} className="p-2 text-slate-500 hover:text-white transition-colors"><Upload size={18}/></button>
@@ -160,12 +175,11 @@ export default function App() {
           </div>
         </header>
 
-        {/* Fitbit Style Year/Month Navigation */}
         <div className="mb-6 space-y-4">
-          <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-3">
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() - 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500"><ChevronLeft size={20}/></button>
-            <span className="text-sm font-black tracking-[0.2em]">{currentMonth.getFullYear()}</span>
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() + 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500"><ChevronRight size={20}/></button>
+          <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-3 shadow-inner">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() - 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500 transition-colors"><ChevronLeft size={20}/></button>
+            <span className="text-sm font-black tracking-[0.3em]">{currentMonth.getFullYear()}</span>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear() + 1, currentMonth.getMonth()))} className="text-slate-600 hover:text-red-500 transition-colors"><ChevronRight size={20}/></button>
           </div>
           
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
@@ -207,13 +221,13 @@ export default function App() {
                   <div className="flex items-center gap-4"><p className="text-lg font-black">₹{e.amount.toFixed(0)}</p><button onClick={() => del(e.id)} className="text-slate-700 hover:text-red-500 p-1"><X size={16}/></button></div>
                 </div>
               ))}
-              {filtered.length === 0 && <div className="py-20 text-center opacity-20"><PieChart size={40} className="mx-auto mb-2" /><p className="text-[10px] font-black uppercase">No records</p></div>}
+              {filtered.length === 0 && <div className="py-20 text-center opacity-20"><PieChart size={40} className="mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">No records</p></div>}
             </div>
           </div>
         )}
 
         {view === 'calendar' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
                <div className="grid grid-cols-7 gap-1">
                   {['S','M','T','W','T','F','S'].map(d => <div key={d} className="text-center text-[10px] text-slate-600 font-bold mb-3">{d}</div>)}
@@ -221,7 +235,7 @@ export default function App() {
                     const dStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const has = expenses.some(e => e.date === dStr);
                     return (
-                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
+                      <button key={day} onClick={() => setSelectedDate(dStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all relative ${selectedDate === dStr ? 'bg-red-600 font-black' : has ? 'bg-slate-800 font-bold' : 'text-slate-600'}`}>{day}{has && <div className="absolute bottom-1 w-1 h-1 bg-red-400 rounded-full" />}</button>
                     );
                   })}
                </div>
@@ -239,34 +253,24 @@ export default function App() {
         )}
 
         {view === 'add' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-red-500 font-black mb-6 uppercase text-[10px] text-center tracking-[0.2em]">Record Spend</h2>
             <div className="space-y-6">
               <div className="space-y-1">
-                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Date</p>
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2 tracking-widest">Date</p>
                 <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
               </div>
-              <div className="grid grid-cols-5 gap-2">{DEFAULT_CATEGORIES.map(c => <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`p-4 rounded-2xl transition-all ${selectedCategory === c.id ? 'bg-red-600 scale-110 shadow-lg' : 'bg-black border border-slate-800'}`}><div className="text-2xl">{c.emoji}</div></button>)}</div>
+              <div className="grid grid-cols-5 gap-2">{DEFAULT_CATEGORIES.map(c => <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`p-4 rounded-2xl transition-all ${selectedCategory === c.id ? 'bg-red-600 scale-110 shadow-lg shadow-red-600/20' : 'bg-black border border-slate-800'}`}><div className="text-2xl">{c.emoji}</div></button>)}</div>
               <div className="space-y-1">
-                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Amount</p>
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2 tracking-widest">Amount</p>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="₹ 0.00" className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-5 text-white text-3xl font-black outline-none focus:border-red-600" />
               </div>
               <div className="space-y-1">
-                <p className="text-[8px] font-black text-slate-500 uppercase ml-2">Remark</p>
+                <p className="text-[8px] font-black text-slate-500 uppercase ml-2 tracking-widest">Remark</p>
                 <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Spent on..." className="w-full bg-black border border-slate-800 rounded-2xl px-5 py-4 text-white outline-none focus:border-red-600" />
               </div>
               <div className="flex gap-3"><button onClick={add} disabled={!amount || !selectedCategory} className="flex-[2] bg-red-600 py-5 rounded-2xl font-black uppercase disabled:opacity-30 tracking-widest shadow-xl shadow-red-600/20">Save</button><button onClick={() => setView('overview')} className="flex-1 bg-slate-800 py-5 rounded-2xl font-black uppercase text-[10px]">Cancel</button></div>
             </div>
-          </div>
-        )}
-
-        {/* Absolute Bottom Install Button */}
-        {!isInstalled && deferredPrompt && (
-          <div className="mt-20 px-4">
-             <button onClick={() => deferredPrompt.prompt()} className="w-full bg-slate-900 border border-red-600/30 text-red-500 font-black py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg animate-pulse">
-               Install Expense Tracker to Home Screen
-             </button>
-             <p className="text-center text-slate-700 text-[8px] mt-2 uppercase font-black tracking-widest">Recommended for best experience</p>
           </div>
         )}
 
