@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert, RefreshCw, Smartphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, TrendingUp, Calendar, Lock, Info, LogOut, User, Users, ShieldAlert, RefreshCw, Smartphone, Trash2 } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyLqAWPxVEA5Gbd62lD4OrCmWc3HnPrhkoW_pCmCajKyCX6NzODAQPjaLWw7SjpKwcPBA/exec';
@@ -15,6 +15,19 @@ const DEFAULT_CATEGORIES = [
   { id: 8, name: 'Miscellaneous', emoji: '📌' },
 ];
 
+// --- UTILS ---
+
+// Force any date format (Google, ISO, etc) into YYYY-MM-DD using LOCAL time
+const normalizeDate = (d) => {
+  if (!d) return "";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return String(d).substring(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // --- STANDALONE COMPONENTS ---
 
 const LoginView = ({ setAuthStatus, setStorageMode }) => {
@@ -27,6 +40,7 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
   const handleRaghuLogin = (e) => {
     e.preventDefault();
     if (email === 'raghukrishnanj2601@gmail.com' && password === 'niveditha') {
+      localStorage.clear(); // Deep clean before login as requested
       localStorage.setItem('appMode', 'cloud');
       setStorageMode('cloud');
       setAuthStatus('authenticated');
@@ -56,7 +70,7 @@ const LoginView = ({ setAuthStatus, setStorageMode }) => {
         <div className="mb-8 text-center">
            <div className="bg-slate-800 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-inner"><TrendingUp className="text-blue-500" size={32} /></div>
            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Ledger Pro</h1>
-           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Privacy Focused Tracking</p>
+           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Version 5.1 - Stable Sync</p>
         </div>
         {view === 'choice' && (
           <div className="space-y-3">
@@ -101,7 +115,7 @@ const Header = ({ storageMode, isInstalled, isSyncing, handleInstallClick, handl
       </h1>
       <div className="flex items-center gap-2 mt-1">
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          {storageMode === 'cloud' ? 'Auto-Syncing...' : 'Local Only'}
+          {storageMode === 'cloud' ? 'Auto-Syncing' : 'Local Only'}
         </p>
         {storageMode === 'cloud' && (
           <RefreshCw size={12} className={`text-slate-600 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} onClick={handleSync} />
@@ -125,7 +139,7 @@ const OverviewView = ({ total, categories, expenses, categoryFilter, setCategory
     </div>
     <div className="grid grid-cols-2 gap-3">
       {categories.map(cat => {
-        const catTotal = expenses.filter(e => e.categoryId === cat.id).reduce((s, e) => s + e.amount, 0).toFixed(2);
+        const catTotal = expenses.filter(e => e.categoryId === cat.id).reduce((s, e) => s + parseFloat(e.amount || 0), 0).toFixed(2);
         return (
           <div key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? null : cat.id)}
             className={`rounded-2xl p-4 cursor-pointer border transition-all ${categoryFilter === cat.id ? 'bg-blue-600 border-blue-400 shadow-lg' : 'bg-slate-900 border-slate-800 hover:bg-slate-800'}`}>
@@ -136,19 +150,19 @@ const OverviewView = ({ total, categories, expenses, categoryFilter, setCategory
       })}
     </div>
     <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-      {expenses.filter(e => !categoryFilter || e.categoryId === categoryFilter).map(expense => {
+      {[...expenses].reverse().filter(e => !categoryFilter || e.categoryId === categoryFilter).map(expense => {
          const cat = categories.find(c => c.id === expense.categoryId);
          return (
            <div key={expense.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex justify-between items-center group">
              <div className="flex items-center gap-3">
                <div className="text-xl">{cat?.emoji}</div>
-               <div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">{new Date(expense.date).toLocaleDateString()}</p></div>
+               <div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">{normalizeDate(expense.date)}</p></div>
              </div>
-             <div className="flex items-center gap-3"><p className="text-sm font-black text-white">₹{expense.amount.toFixed(0)}</p><button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400 p-1"><X size={14}/></button></div>
+             <div className="flex items-center gap-3"><p className="text-sm font-black text-white">₹{parseFloat(expense.amount || 0).toFixed(0)}</p><button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400 p-1"><X size={14}/></button></div>
            </div>
          );
       })}
-      {expenses.length === 0 && <p className="text-xs text-slate-600 text-center py-10">No records found</p>}
+      {expenses.length === 0 && <p className="text-xs text-slate-600 text-center py-10 font-bold">NO RECORDS FOUND</p>}
     </div>
   </div>
 );
@@ -169,7 +183,7 @@ const AddExpenseView = ({ selectedDate, setSelectedDate, categories, selectedCat
 );
 
 const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDate, setSelectedDate, expenses, categories, handleDeleteExpense, setView }) => {
-  const dateExpenses = expenses.filter(e => String(e.date).substring(0, 10) === String(selectedDate).substring(0, 10));
+  const dateExpenses = expenses.filter(e => normalizeDate(e.date) === normalizeDate(selectedDate));
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -183,8 +197,8 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
              {calendarDays.map((day, idx) => {
                 if (!day) return <div key={`empty-${idx}`} />;
                 const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const hasExpense = expenses.some(e => String(e.date).substring(0, 10) === dateStr);
-                return (<button key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${selectedDate === dateStr ? 'bg-blue-600 text-white font-black shadow-lg' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
+                const hasExpense = expenses.some(e => normalizeDate(e.date) === dateStr);
+                return (<button key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all ${normalizeDate(selectedDate) === dateStr ? 'bg-blue-600 text-white font-black shadow-lg' : hasExpense ? 'bg-slate-800 text-white font-bold' : 'text-slate-500 hover:bg-slate-800'}`}>{day}{hasExpense && <div className="w-1 h-1 bg-blue-400 rounded-full mt-0.5" />}</button>);
              })}
           </div>
        </div>
@@ -195,12 +209,12 @@ const CalendarView = ({ currentMonth, setCurrentMonth, calendarDays, selectedDat
               const cat = categories.find(c => c.id === expense.categoryId);
               return (
                 <div key={expense.id} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-3 flex justify-between items-center">
-                  <div className="flex items-center gap-3"><div className="text-xl">{cat?.emoji}</div><div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">₹{expense.amount.toFixed(0)}</p></div></div>
+                  <div className="flex items-center gap-3"><div className="text-xl">{cat?.emoji}</div><div><p className="text-sm font-bold text-white">{expense.description}</p><p className="text-[10px] text-slate-500">₹{parseFloat(expense.amount || 0).toFixed(0)}</p></div></div>
                   <button onClick={() => handleDeleteExpense(expense.id)} className="text-slate-600 hover:text-red-400 p-1"><X size={14}/></button>
                 </div>
               );
             })}
-            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center">Empty</p>}
+            {dateExpenses.length === 0 && <p className="text-xs text-slate-600 py-6 text-center font-bold uppercase">No records for this date</p>}
           </div>
        </div>
        <button onClick={() => setView('overview')} className="w-full bg-slate-900 text-slate-500 border border-slate-800 py-4 rounded-2xl font-black mt-2">Dashboard</button>
@@ -220,7 +234,7 @@ const ExpenseTracker = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // Form states
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(normalizeDate(new Date()));
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -234,9 +248,9 @@ const ExpenseTracker = () => {
     try {
       const response = await fetch(GOOGLE_SHEET_URL, { redirect: 'follow' });
       const data = await response.json();
-      const formatted = data.map(item => ({
+      const formatted = data.map((item, idx) => ({
         ...item,
-        id: "cloud_" + Math.random().toString(36).substr(2, 9),
+        id: item.id || "cloud_" + idx + "_" + Date.now(),
         categoryId: DEFAULT_CATEGORIES.find(c => c.name === item.categoryName)?.id || 8
       }));
       setExpenses(formatted);
@@ -250,14 +264,12 @@ const ExpenseTracker = () => {
     setExpenses(saved ? JSON.parse(saved) : []);
   }, []);
 
-  // AUTO-SYNC on Auth State Change
   useEffect(() => {
     const mode = localStorage.getItem('appMode');
     if (mode) {
       setStorageMode(mode);
       setAuthStatus('authenticated');
       if (mode === 'cloud') {
-         // Load cache first, then fetch
          const cached = localStorage.getItem('expenses_cloud_cache');
          if (cached) setExpenses(JSON.parse(cached));
          loadDataFromCloud();
@@ -283,7 +295,7 @@ const ExpenseTracker = () => {
       date: selectedDate 
     };
 
-    const updatedExpenses = [newExpense, ...expenses];
+    const updatedExpenses = [...expenses, newExpense];
     setExpenses(updatedExpenses);
     
     if (storageMode === 'local') {
@@ -301,7 +313,7 @@ const ExpenseTracker = () => {
           categoryName: cat?.name || 'Miscellaneous'
         })
       }).finally(() => {
-         loadDataFromCloud(); // Auto-refresh after add
+         loadDataFromCloud(); 
       });
     }
     setDescription(''); setAmount(''); setSelectedCategory(null); setView('overview');
@@ -326,18 +338,17 @@ const ExpenseTracker = () => {
           amount: expenseToDelete?.amount
         })
       }).finally(() => {
-        loadDataFromCloud(); // Auto-refresh after delete
+        loadDataFromCloud(); 
       });
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('appMode');
-    localStorage.removeItem('appPasscode');
+    localStorage.clear(); // Deep clean as requested
     window.location.reload();
   };
 
-  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0).toFixed(2);
+  const totalSpent = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0).toFixed(2);
 
   const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
@@ -347,13 +358,13 @@ const ExpenseTracker = () => {
   for (let i = 0; i < firstDay; i++) calendarDays.push(null);
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
-  if (authStatus === 'loading') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black">STARTING...</div>;
+  if (authStatus === 'loading') return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black">INITIALIZING...</div>;
   if (authStatus === 'login') return <LoginView setAuthStatus={setAuthStatus} setStorageMode={setStorageMode} />;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 font-sans pb-32">
       <div className="max-w-md mx-auto">
-        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt()} handleLogout={handleLogout} handleSync={loadDataFromCloud} />
+        <Header storageMode={storageMode} isInstalled={isInstalled} isSyncing={isSyncing} handleInstallClick={() => deferredPrompt?.prompt() || alert("Use your browser menu to 'Add to Home Screen'")} handleLogout={handleLogout} handleSync={loadDataFromCloud} />
 
         {view === 'overview' && <OverviewView total={totalSpent} categories={DEFAULT_CATEGORIES} expenses={expenses} categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter} handleDeleteExpense={handleDeleteExpense} />}
         {view === 'add' && <AddExpenseView selectedDate={selectedDate} setSelectedDate={setSelectedDate} categories={DEFAULT_CATEGORIES} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} amount={amount} setAmount={setAmount} description={description} setDescription={setDescription} handleAddExpense={handleAddExpense} setView={setView} />}
