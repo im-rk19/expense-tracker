@@ -91,6 +91,25 @@ const ExpenseTracker = () => {
   });
 
   const [view, setView] = useState('overview'); // 'overview', 'add', 'calendar'
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [description, setDescription] = useState('');
@@ -495,12 +514,22 @@ const ExpenseTracker = () => {
             <h1 className="text-2xl font-bold tracking-tight">Track Spend</h1>
           </div>
           {authStatus === 'authenticated' && (
-             <button 
-                onClick={() => setAuthStatus('authenticating')}
-                className="text-slate-500 hover:text-white transition"
-             >
-               <Lock size={20} />
-             </button>
+             <div className="flex items-center gap-4">
+               {deferredPrompt && (
+                 <button 
+                   onClick={handleInstallClick}
+                   className="bg-yellow-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-full animate-bounce"
+                 >
+                   Install App
+                 </button>
+               )}
+               <button 
+                  onClick={() => setAuthStatus('authenticating')}
+                  className="text-slate-500 hover:text-white transition"
+               >
+                 <Lock size={20} />
+               </button>
+             </div>
           )}
         </div>
 
